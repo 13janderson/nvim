@@ -1,6 +1,6 @@
 vim.api.nvim_create_autocmd("BufEnter", {
   pattern = { "*.js", "*.ts" },
-  group = vim.api.nvim_create_augroup("JSMacros", {
+  group = vim.api.nvim_create_augroup("JSFile", {
     clear = true,
   }),
   callback = function(_)

@@ -234,7 +234,7 @@ require('lazy').setup({
       import = "custom/plugins"
     },
     {
-      import = "custom/macros"
+      import = "custom/filetype"
     },
     -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
     --

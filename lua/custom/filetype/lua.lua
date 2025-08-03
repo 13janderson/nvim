@@ -1,6 +1,6 @@
 vim.api.nvim_create_autocmd("BufEnter", {
   pattern = { "*.lua" },
-  group = vim.api.nvim_create_augroup("LuaMacros", {
+  group = vim.api.nvim_create_augroup("LuaFile", {
     clear = true,
   }),
   callback = function(_)

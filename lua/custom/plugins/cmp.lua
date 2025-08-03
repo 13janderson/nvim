@@ -1,4 +1,4 @@
-return{
+return {
   { -- Autocompletion
     'hrsh7th/nvim-cmp',
     event = 'InsertEnter',
@@ -109,6 +109,7 @@ return{
             group_index = 0,
           },
           { name = 'nvim_lsp' },
+          -- { name = 'buffer' },
           { name = 'luasnip' },
           { name = 'path' },
           { name = 'nvim_lsp_signature_help' },
