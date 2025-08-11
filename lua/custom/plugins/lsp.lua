@@ -102,6 +102,7 @@ return {
 
           map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
           map('gd', go_to_first_definition, '[G]oto [D]efinition')
+          map('K', vim.lsp.buf.hover, 'Hover')
           map('<leader>f', vim.lsp.buf.format, '[F]ormat')
           map('<leader>r', vim.lsp.buf.rename, '[R]ename')
           map('<leader>?', vim.lsp.completion.get, 'Completion[?]')

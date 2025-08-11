@@ -1,12 +1,16 @@
 return {
-  -- {
-  --   'MeanderingProgrammer/render-markdown.nvim',
-  --   -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.nvim' }, -- if you use the mini.nvim suite
-  --   -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.icons' }, -- if you use standalone mini plugins
-  --   dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you prefer nvim-web-devicons
-  --   ---@module 'render-markdown"onedark"'
-  --   ---@type render.md.UserConfig
-  -- },
+  {
+    'MeanderingProgrammer/render-markdown.nvim',
+    -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.nvim' }, -- if you use the mini.nvim suite
+    -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.icons' }, -- if you use standalone mini plugins
+    dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you prefer nvim-web-devicons
+    ---@module 'render-markdown"onedark"'
+    ---@type render.md.UserConfig
+    opts = {
+      only_render_image_at_cursor = true
+    }
+
+  },
   {
     "toppair/peek.nvim",
     build = "deno task --quiet build:fast",
@@ -25,7 +29,7 @@ return {
         callback = function(_)
           local peek = require("peek")
           if peek.is_open() then
-              peek.close()
+            peek.close()
           end
         end
       })
@@ -149,7 +153,7 @@ return {
           vim.api.nvim_feedkeys(termcodes, "n", false)
 
           -- Horrible hack to get this weird formatting to disappear.
-          -- This seems to happen regardless of terminal emulator but this hack this infact work 
+          -- This seems to happen regardless of terminal emulator but this hack this infact work
           -- and I hate it.
           vim.defer_fn(function()
             ReloadCurentBuffer()
@@ -195,7 +199,7 @@ return {
       -- Auto commands specifically for obsidian related buffers
       vim.api.nvim_create_autocmd('BufNewFile', {
         desc = 'Auto Commands for new Markdow files made in vault.',
-        pattern = { vim.fn.expand "~/vault" .. "*.md"},
+        pattern = { vim.fn.expand "~/vault" .. "*.md" },
         group = vim.api.nvim_create_augroup('NewVaultFile', { clear = true }),
         callback = function(e)
           -- TODO, what do we want to do with this?
