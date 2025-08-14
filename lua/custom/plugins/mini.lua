@@ -1,4 +1,4 @@
-return{
+return {
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
     config = function()
@@ -9,6 +9,8 @@ return{
       --  - yinq - [Y]ank [I]nside [N]ext [Q]uote
       --  - ci'  - [C]hange [I]nside [']quote
       require('mini.ai').setup { n_lines = 500 }
+
+      require('mini.statusline').setup({})
 
       -- Add/delete/replace surroundings (brackets, quotes, etc.)
       --

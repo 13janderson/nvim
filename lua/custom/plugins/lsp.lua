@@ -108,12 +108,25 @@ return {
           map('<leader>?', vim.lsp.completion.get, 'Completion[?]')
           map('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
 
+
+          local lsp_save_buf_var = "lspformatbufvar"
+          vim.api.nvim_create_user_command("Foff", function()
+            vim.g[lsp_save_buf_var] = false
+          end, {})
+
           -- Format on save
           vim.api.nvim_create_autocmd('BufWritePost', {
             desc = 'LSP format on save',
             group = vim.api.nvim_create_augroup('lsp-format-on-save', { clear = true }),
             callback = function(e)
               local bufnr = e.buf
+
+              local lsp_buf_value = vim.g[lsp_save_buf_var]
+              if (lsp_buf_value ~= nil and not lsp_buf_value) then
+                vim.notify("Not formatting")
+                return
+              end
+
               local clients = vim.lsp.get_clients({ bufnr = bufnr })
               if (#clients > 0) then
                 for _, client in ipairs(clients) do
