@@ -1,17 +1,9 @@
 local rename_map = {}
 return {
-  -- {
-  --   -- "13janderson/harpoon-float.nvim",
-  --   dir = "~/projects/plugins/harpoon-float",
-  --   dependencies = {
-  --     "13janderson/harpoon2",
-  --     dir = "~/projects/plugins/harpoon2.git/harpoon2/",
-  --   },
-  -- },
   {
-    dir = "~/projects/plugins/harpoon2.git/harpoon2/",
-    -- branch = "harpoon2",
-    -- event = "VimEnter",
+    "13janderson/harpoon2",
+    branch = "harpoon2",
+    event = "VimEnter",
     dependencies = { "nvim-lua/plenary.nvim" },
     config = function()
       local harpoon = require('harpoon')
