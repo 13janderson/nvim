@@ -3,12 +3,13 @@ return {
     'nvim-treesitter/nvim-treesitter-context',
     opts = {},
     config = function()
-      -- vim.keymap.set("n", "gC", function()
-      --  require("treesitter-context").go_to_context(vim.v.count1)
-      -- end, { silent = true })
+      vim.keymap.set("n", "gx", function()
+        require("treesitter-context").go_to_context(vim.v.count1)
+      end, { silent = true })
     end
   },
-  { -- Highlight, edit, and navigate code
+  {
+    -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
@@ -25,6 +26,7 @@ return {
         'markdown',
         'markdown_inline',
         'query',
+        'terraform',
         'vim',
         'vimdoc',
         'go',

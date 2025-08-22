@@ -26,7 +26,7 @@ return {
       },
       keymaps = {
         ["g?"] = { "actions.show_help", mode = "n" },
-        ["<CR>"] = "actions.select",
+        ["<CR>"] = { "actions.select", opts = { close = true } },
         ["<C-s>"] = {},
         ["<C-h>"] = {},
         ["<C-t>"] = {},

@@ -8,8 +8,13 @@ end
 
 ---@param prefix ?string
 ---@param tbl table
-function Print(prefix, tbl)
+function PrintPrefix(prefix, tbl)
   print(prefix or "", vim.inspect(tbl))
+end
+
+---@param tbl table
+function Print(tbl)
+  print(vim.inspect(tbl))
 end
 
 -- Run a function when the next buffer is loaded.

@@ -1,10 +1,10 @@
-
+---@param colour "rosepine" | "tokionight" | "onedark" | "catppuccin" | "oxocarbon" | "everforest" | nil
 function ColourMyPencils(colour)
   -- TODO refactor this shite, wrap setting colour in pcall maybe?
   if colour == "rosepine" then
     vim.cmd.colorscheme 'rose-pine-moon'
   elseif colour == "tokionight" then
-    vim.cmd.colorscheme 'tokyonight-night'
+    vim.cmd.colorscheme 'tokyonight-storm'
   elseif colour == "onedark" then
     vim.cmd.colorscheme 'onedark'
   elseif colour == "catppuccin" then
@@ -69,7 +69,7 @@ local tokionight = {
   config = function()
     ---@diagnostic disable-next-line: missing-fields
     require('tokyonight').setup {
-      transparent = false,
+      transparent = true,
       styles = {
         italic = false,
         bold = false,
@@ -121,16 +121,22 @@ local everforest = {
 }
 
 
+local oil_filetree = require "oil_filetree"
+local ft = oil_filetree:new()
+
 -- Try to make editor more VSCodey, for ease of co-workers
 -- this function can be used as a toggle using a global variable vscode
 local function vs_code()
   local vs_code_on = vim.g.vscode or false
   if vs_code_on then
+    ft:kill()
+    ft = oil_filetree:new()
     -- We assume that this function gives us a default colourscheme when no arguments are passed
-    ColourMyPencils()
+    -- ColourMyPencils()
     vim.wo.relativenumber = true
     vim.g.vscode = false
   else
+    ft:up()
     -- ColourMyPencils("tokionight")
     vim.wo.relativenumber = false
     vim.g.vscode = true
