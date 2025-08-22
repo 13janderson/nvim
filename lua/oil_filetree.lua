@@ -1,5 +1,4 @@
 -- Poor mans use of oil.nvim as a filetree
-
 ---@class OilFileTree
 local OilFiletree = {}
 
@@ -44,13 +43,10 @@ function OilFiletree:up()
 end
 
 function OilFiletree:load()
-  print "reloading"
   vim.cmd("40vs")
   open_oil_parent_dir()
   self.oil_bufnr = vim.api.nvim_get_current_buf()
-  print("oil_bufnr", self.oil_bufnr)
   self.oil_winnr = vim.api.nvim_get_current_win()
-  print("oil_winnr", self.oil_winnr)
 
   vim.api.nvim_create_autocmd("BufEnter", {
     group = vim.api.nvim_create_augroup("OilFileTreeOilWindow", { clear = true }),

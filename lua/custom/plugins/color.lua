@@ -120,7 +120,6 @@ local everforest = {
   end,
 }
 
-
 local oil_filetree = require "oil_filetree"
 local ft = oil_filetree:new()
 
