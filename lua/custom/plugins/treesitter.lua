@@ -1,11 +1,15 @@
 return {
   {
     'nvim-treesitter/nvim-treesitter-context',
-    opts = {},
     config = function()
       vim.keymap.set("n", "gx", function()
         require("treesitter-context").go_to_context(vim.v.count1)
       end, { silent = true })
+      require "treesitter-context".setup({
+        opts = {
+          enable = true,
+        },
+      })
     end
   },
   {
