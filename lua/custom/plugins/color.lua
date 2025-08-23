@@ -120,22 +120,22 @@ local everforest = {
   end,
 }
 
-local oil_filetree = require "oil_filetree"
-local ft = oil_filetree:new()
+local oil_ex = require "oil_filexplorer"
+local ex = oil_ex:new()
 
 -- Try to make editor more VSCodey, for ease of co-workers
 -- this function can be used as a toggle using a global variable vscode
 local function vs_code()
   local vs_code_on = vim.g.vscode or false
   if vs_code_on then
-    ft:kill()
-    ft = oil_filetree:new()
+    ex:kill()
+    ex = oil_ex:new()
     -- We assume that this function gives us a default colourscheme when no arguments are passed
     -- ColourMyPencils()
     vim.wo.relativenumber = true
     vim.g.vscode = false
   else
-    ft:up()
+    ex:up()
     -- ColourMyPencils("tokionight")
     vim.wo.relativenumber = false
     vim.g.vscode = true

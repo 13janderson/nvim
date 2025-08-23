@@ -1,6 +1,6 @@
 -- Poor mans use of oil.nvim as a filetree
----@class OilFileTree
-local OilFiletree = {}
+---@class OilFileEx
+local OilFileEx = {}
 
 ---@return string
 local function get_current_parent_dir()
@@ -21,7 +21,7 @@ end
 
 -- Opens the filetree to the left of the current window
 -- and sets up an autocmd for
-function OilFiletree:up()
+function OilFileEx:up()
   self.code_winnr = vim.api.nvim_get_current_win()
   self.code_bufnr = vim.api.nvim_get_current_buf()
 
@@ -33,7 +33,7 @@ function OilFiletree:up()
       end
 
       local bufnr = vim.api.nvim_win_get_buf(self.code_winnr)
-      if bufnr ~= self.code_bufnr then
+      if bufnr ~= self.code_bufnr and not is_oil_buffer(bufnr) then
         self.code_bufnr = bufnr
         self:reload()
       end
@@ -42,7 +42,7 @@ function OilFiletree:up()
   self:load()
 end
 
-function OilFiletree:load()
+function OilFileEx:load()
   vim.cmd("40vs")
   open_oil_parent_dir()
   self.oil_bufnr = vim.api.nvim_get_current_buf()
@@ -72,19 +72,19 @@ function OilFiletree:load()
   vim.api.nvim_set_current_win(self.code_winnr)
 end
 
-function OilFiletree:reload()
+function OilFileEx:reload()
   vim.schedule(function()
     self:down()
     self:load()
   end)
 end
 
-function OilFiletree:new()
+function OilFileEx:new()
   self.__index = self
   return setmetatable({}, self)
 end
 
-function OilFiletree:down()
+function OilFileEx:down()
   if self.oil_bufnr and vim.api.nvim_buf_is_valid(self.oil_bufnr) then
     vim.api.nvim_buf_delete(self.oil_bufnr, { force = true })
   end
@@ -94,9 +94,9 @@ function OilFiletree:down()
   end
 end
 
-function OilFiletree:kill()
+function OilFileEx:kill()
   self:down()
   self.killed = true
 end
 
-return OilFiletree
+return OilFileEx
