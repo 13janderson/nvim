@@ -132,12 +132,14 @@ local function vs_code()
     ex = oil_ex:new()
     -- We assume that this function gives us a default colourscheme when no arguments are passed
     -- ColourMyPencils()
-    vim.wo.relativenumber = true
+    vim.opt.relativenumber = true
+    vim.opt.number = true
     vim.g.vscode = false
   else
     ex:up()
     -- ColourMyPencils("tokionight")
-    vim.wo.relativenumber = false
+    vim.opt.relativenumber = false
+    vim.opt.number = true
     vim.g.vscode = true
   end
   ColourMyLines()

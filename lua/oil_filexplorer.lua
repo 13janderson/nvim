@@ -14,9 +14,10 @@ local function is_oil_buffer(bufnr)
   end
 end
 
-local function open_oil_parent_dir()
+function OilFileEx:open_oil_dir()
   local dir = get_current_parent_dir()
   require "oil".open(dir)
+  self.curdir = dir
 end
 
 -- Opens the filetree to the left of the current window
@@ -42,9 +43,13 @@ function OilFileEx:up()
   self:load()
 end
 
+function OilFileEx:oil_should_reload()
+  return get_current_parent_dir() ~= self.curdir
+end
+
 function OilFileEx:load()
   vim.cmd("40vs")
-  open_oil_parent_dir()
+  self:open_oil_dir()
   self.oil_bufnr = vim.api.nvim_get_current_buf()
   self.oil_winnr = vim.api.nvim_get_current_win()
 
@@ -73,10 +78,12 @@ function OilFileEx:load()
 end
 
 function OilFileEx:reload()
-  vim.schedule(function()
-    self:down()
-    self:load()
-  end)
+  if self:oil_should_reload() then
+    vim.schedule(function()
+      self:down()
+      self:load()
+    end)
+  end
 end
 
 function OilFileEx:new()
