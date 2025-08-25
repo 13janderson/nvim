@@ -35,8 +35,9 @@ function OilFileEx:up()
 
       local bufnr = vim.api.nvim_win_get_buf(self.code_winnr)
       if bufnr ~= self.code_bufnr and not is_oil_buffer(bufnr) then
+        print "reloading from code window"
         self.code_bufnr = bufnr
-        self:reload()
+        self:reload_if_dir_changed()
       end
     end
   })
@@ -65,9 +66,12 @@ function OilFileEx:load()
         -- reload oil if anything but an oil buffer is
         -- loaded in the designated oil window
         if not is_oil_buffer(bufnr) then
+          print "reloading"
           self:reload()
           -- put whatever was loaded into the code window
           vim.api.nvim_win_set_buf(self.code_winnr, bufnr)
+        else
+          print "not reloading"
         end
       end
     end
@@ -78,11 +82,17 @@ function OilFileEx:load()
 end
 
 function OilFileEx:reload()
+  vim.schedule(function()
+    self:down()
+    self:load()
+  end)
+end
+
+function OilFileEx:reload_if_dir_changed()
   if self:oil_should_reload() then
-    vim.schedule(function()
-      self:down()
-      self:load()
-    end)
+    self:reload()
+  else
+    print "not reloading oil"
   end
 end
 
@@ -94,6 +104,9 @@ end
 function OilFileEx:down()
   if self.oil_bufnr and vim.api.nvim_buf_is_valid(self.oil_bufnr) then
     vim.api.nvim_buf_delete(self.oil_bufnr, { force = true })
+    print "deleted buffer"
+  else
+    print "could not delete oil buffer"
   end
 
   if self.oil_winnr and vim.api.nvim_win_is_valid(self.oil_winnr) then
