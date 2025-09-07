@@ -1,5 +1,11 @@
 return {
   'kiddos/gemini.nvim',
-  opts = {},
+  opts = {
+    completion_delay = 400,
+    instruction = {
+      -- Don't like the way the menu system is done here... probs not going to use this
+      menu_key = "<C-G>"
+    }
+  },
   cond = not string.find(vim.fn.getcwd(), "CVS")
 }
