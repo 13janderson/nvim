@@ -1,4 +1,5 @@
 return {
   'kiddos/gemini.nvim',
-  opts = {}
+  opts = {},
+  cond = not string.find(vim.fn.getcwd(), "CVS")
 }
