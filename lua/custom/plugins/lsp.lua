@@ -285,7 +285,24 @@ return {
         jsonls = {},
         prismals = {
         },
-        yamlls = {},
+        yamlls = {
+          -- settings = {
+          --   yaml = {
+          --     schemas = {
+          --       ["https://raw.githubusercontent.com/canonical/cloud-init/main/cloudinit/config/schemas/versions.schema.cloud-config.json"] = {
+          --         "cloud-config.yaml",
+          --         "cloudinit/*.yaml",
+          --         "*-profile.yaml",
+          --         "*_profile.yaml"
+          --       },
+          --     },
+          --     validate = true,
+          --     format = { enable = true },
+          --     completion = true,
+          --     hover = true,
+          --   }
+          -- }
+        },
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
         -- Some languages (like typescript) have entire language plugins that can be useful:

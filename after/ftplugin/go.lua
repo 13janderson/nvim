@@ -1,2 +1,2 @@
-vim.fn.setreg("p", 'yiwofmt.Printf()i""hpa: %s\\nla, pa_')
-vim.fn.setreg("e", 'oif err != nil{}i\rw')
+vim.fn.setreg("p", 'yiw}ifmt.Printf()i""hpa: %s\\nla, paok_')
+vim.fn.setreg("o", 'yiwofmt.Printf()i""hpa: %s\\nla, pa_')
