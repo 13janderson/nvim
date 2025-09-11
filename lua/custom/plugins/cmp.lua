@@ -78,7 +78,7 @@ return {
           -- Manually trigger a completion from nvim-cmp.
           --  Generally you don't need this, because nvim-cmp will display
           --  completions whenever it has completion options available.
-          ['<C-Space>'] = cmp.mapping.complete {},
+          ['<C-?>'] = cmp.mapping.complete {},
 
           -- Think of <c-l> as moving to the right of your snippet expansion.
           --  So if you have a snippet that's like:
@@ -114,7 +114,11 @@ return {
           { name = 'path' },
           { name = 'nvim_lsp_signature_help' },
           { name = 'vim-dadbod-completion' },
+          { name = 'minuet' }
         },
+        performance = {
+          fetching_timeout = 2000,
+        }
       }
     end,
   },
