@@ -126,17 +126,17 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- Disable CR keybinding, strange things were happening ngl
 -- vim.keymap.set('n', '<CR>', '<NOP>', { noremap = true, silent = true })
 -- Quickfix list <CR> selection
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "qf",
-  callback = function()
-    vim.keymap.set("n", "<CR>", "<CR>", { buffer = true, silent = true })
-  end,
-})
+-- vim.api.nvim_create_autocmd("FileType", {
+--   pattern = "qf",
+--   callback = function()
+--     vim.keymap.set("n", "<CR>", "<CR>", { buffer = true, silent = true })
+--   end,
+-- })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
 -- is not what someone will guess without a bit more experience.
---
+
 -- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
@@ -154,7 +154,6 @@ vim.keymap.set("n", "<C-u>", "<C-u>zz")
 -- Not sure I like these
 -- vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
 -- vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
-
 
 --[[ vim.keymap.set("n", "[q", "[qzz")
 vim.keymap.set("n", "]q", "]qzz") ]]
@@ -174,18 +173,29 @@ vim.keymap.set('n', '<leader><leader>', '<C-^>', { noremap = false, silent = tru
 vim.api.nvim_set_keymap('c', '<C-j>', '<C-n>', { noremap = false })
 vim.api.nvim_set_keymap('c', '<C-k>', '<C-p>', { noremap = false })
 
+-- Open links under cursor in browser
+local function open_link()
+  local url = vim.fn.expand('<cfile>') -- word/file under cursor
+  if url:match('^https?://') then
+    -- macOS: "open"
+    -- Linux: "xdg-open"
+    -- Windows (WSL): "wslview" or "cmd.exe /c start"
+    local browser = vim.env.BROWSER
+    if browser == nil then
+      print(string.format("Not opening %s since $BROWSER not set.", browser))
+      return
+    end
+    print(string.format("Opening %s with %s", browser, url))
+    vim.fn.jobstart({ browser, url }, { detach = true })
+  else
+    -- Fallback to normal gf behavior
+    vim.cmd('normal! gf')
+  end
+end
+-- Map gf to open URLs if it's a link
+vim.keymap.set('n', 'gf', open_link, { noremap = true, silent = true })
+
 vim.g.python3_host_prog = "/usr/bin/python3"
-
-
--- User commands for dfd and dfu scripts
-vim.api.nvim_create_user_command("Dfd", function()
-  vim.cmd("silent !(zsh $HOME/.local/bin/scripts/dfd.sh)")
-  print("dotfiles downloaded")
-end, {})
-vim.api.nvim_create_user_command("Dfu", function()
-  vim.cmd("silent !(zsh $HOME/.local/bin/scripts/dfu.sh)")
-  print("dotfiles uploaded")
-end, {})
 
 vim.opt.termguicolors = true
 

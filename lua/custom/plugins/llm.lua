@@ -33,6 +33,9 @@ local minuet = {
       end
       muet.config.cmp.enable_auto_complete = not cmp_enabled
     end)
+
+    -- Nice to know when this is loaded and when it isnt.
+    print("GEMINI IS RUNNING")
   end,
   dependencies = {
     'nvim-lua/plenary.nvim',
