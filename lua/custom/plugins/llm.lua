@@ -1,5 +1,5 @@
 -- Gemini
-local gemini = {
+local _ = {
   'kiddos/gemini.nvim',
   opts = {
     completion_delay = 400,
@@ -17,8 +17,22 @@ local minuet = {
     require('minuet').setup {
       -- -- Your configuration options here
       provider = 'gemini',
+      provider_options = {
+        gemini = {
+          model = "gemini-2.5-flash-lite",
+        }
+      }
     }
-    vim.keymap.set("n", "<leader>g", ":Minuet cmp toggle<CR>")
+    vim.keymap.set("n", "<leader>g", function()
+      local muet = require "minuet"
+      local cmp_enabled = muet.config.cmp.enable_auto_complete
+      if cmp_enabled then
+        print("Minuet cmp disabled")
+      else
+        print("Minuet cmp enabled")
+      end
+      muet.config.cmp.enable_auto_complete = not cmp_enabled
+    end)
   end,
   dependencies = {
     'nvim-lua/plenary.nvim',
@@ -30,5 +44,6 @@ local minuet = {
   },
   cond = not string.find(vim.fn.getcwd(), "CVS")
 }
+
 
 return minuet
