@@ -1,3 +1,4 @@
+require("globals")
 --[[
 --
 o====================================================================
@@ -173,27 +174,8 @@ vim.keymap.set('n', '<leader><leader>', '<C-^>', { noremap = false, silent = tru
 vim.api.nvim_set_keymap('c', '<C-j>', '<C-n>', { noremap = false })
 vim.api.nvim_set_keymap('c', '<C-k>', '<C-p>', { noremap = false })
 
--- Open links under cursor in browser
-local function open_link()
-  local url = vim.fn.expand('<cfile>') -- word/file under cursor
-  if url:match('^https?://') then
-    -- macOS: "open"
-    -- Linux: "xdg-open"
-    -- Windows (WSL): "wslview" or "cmd.exe /c start"
-    local browser = vim.env.BROWSER
-    if browser == nil then
-      print(string.format("Not opening %s since $BROWSER not set.", browser))
-      return
-    end
-    print(string.format("Opening %s with %s", browser, url))
-    vim.fn.jobstart({ browser, url }, { detach = true })
-  else
-    -- Fallback to normal gf behavior
-    vim.cmd('normal! gf')
-  end
-end
 -- Map gf to open URLs if it's a link
-vim.keymap.set('n', 'gf', open_link, { noremap = true, silent = true })
+vim.keymap.set('n', 'gf', OpenLink, { noremap = true, silent = true })
 
 vim.g.python3_host_prog = "/usr/bin/python3"
 
@@ -211,7 +193,6 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 })
 
 
-
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
@@ -224,7 +205,6 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end ---@diagnostic disable-next-line: undefined-field
 vim.opt.rtp:prepend(lazypath)
 
-require("globals")
 
 -- NOTE: Here is where you install your plugins.
 require('lazy').setup({

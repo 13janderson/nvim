@@ -48,3 +48,23 @@ function _G.ReloadCurentBuffer()
     vim.api.nvim_buf_delete(scratch_buf_nr, {})
   end, 100)
 end
+
+-- Open links under cursor in browser
+function _G.OpenLink()
+  local url = vim.fn.expand('<cfile>') -- word/file under cursor
+  if url:match('^https?://') then
+    -- macOS: "open"
+    -- Linux: "xdg-open"
+    -- Windows (WSL): "wslview" or "cmd.exe /c start"
+    local browser = vim.env.BROWSER
+    if browser == nil then
+      print(string.format("Not opening %s since $BROWSER not set.", browser))
+      return
+    end
+    print(string.format("Opening %s with %s", browser, url))
+    vim.fn.jobstart({ browser, url }, { detach = true })
+  else
+    -- Fallback to normal gf behavior
+    vim.cmd('normal! gf')
+  end
+end
