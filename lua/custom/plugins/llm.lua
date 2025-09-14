@@ -18,6 +18,7 @@ local minuet = {
       -- -- Your configuration options here
       provider = 'gemini',
     }
+    vim.keymap.set("n", "<leader>g", ":Minuet cmp toggle<CR>")
   end,
   dependencies = {
     'nvim-lua/plenary.nvim',
@@ -27,7 +28,7 @@ local minuet = {
     -- optional, if you are using virtual-text frontend, blink is not required.
     -- { 'Saghen/blink.cmp' },
   },
-  -- cond = not string.find(vim.fn.getcwd(), "CVS")
+  cond = not string.find(vim.fn.getcwd(), "CVS")
 }
 
 return minuet
