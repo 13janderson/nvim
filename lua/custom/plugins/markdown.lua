@@ -99,8 +99,30 @@ return {
         ---@param path obsidian.Path the absolute path to the image file
         ---@return string
         img_text_func = function(client, path)
-          path = client:vault_relative_path(path) or path
-          return string.format("![%s](%s)", path.name, path)
+          print("path", path)
+          local obsidian_path = require("obsidian.path")
+          local img_path = client:vault_relative_path(path) or path
+          local relative_file_path = obsidian_path:new(vim.fn.expand("%:p:h")):relative_to(client:vault_root())
+          print("relative_file_path", relative_file_path)
+
+          local function count_path_parts(pth, sep)
+            sep = sep or "/" -- default to Unix-style
+            local count = 0
+            for _ in string.gmatch(pth, "[^" .. sep .. "]+") do
+              count = count + 1
+            end
+            return count
+          end
+
+          local parts = count_path_parts(relative_file_path.filename)
+
+          local out = ""
+          for _ = 1, parts, 1 do
+            out = out .. "../"
+          end
+
+          out = out .. img_path.filename
+          return string.format("![%s](%s)", img_path.name, out)
         end,
       },
 
@@ -146,16 +168,6 @@ return {
         local filetype = vim.bo.filetype
         if filetype == "markdown" then
           vim.cmd(string.format("ObsidianPasteImg %s", opts.attachments.img_name_func()))
-          local vault = vim.fn.expand "~/vault/"
-          -- Hack add the full path to the vault by prepending the expansion of ~/vault
-          -- since thats where our images live.
-          local keys = string.format("_ci(%s<C-C>p", vault)
-          local termcodes = vim.api.nvim_replace_termcodes(keys, true, false, true)
-          vim.api.nvim_feedkeys(termcodes, "n", false)
-
-          -- Horrible hack to get this weird formatting to disappear.
-          -- This seems to happen regardless of terminal emulator but this hack this infact work
-          -- and I hate it.
           vim.defer_fn(function()
             ReloadCurentBuffer()
           end, 250)
