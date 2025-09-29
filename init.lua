@@ -127,12 +127,12 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- Disable CR keybinding, strange things were happening ngl
 -- vim.keymap.set('n', '<CR>', '<NOP>', { noremap = true, silent = true })
 -- Quickfix list <CR> selection
--- vim.api.nvim_create_autocmd("FileType", {
---   pattern = "qf",
---   callback = function()
---     vim.keymap.set("n", "<CR>", "<CR>", { buffer = true, silent = true })
---   end,
--- })
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "qf",
+  callback = function()
+    vim.keymap.set("n", "<CR>", "<CR>", { buffer = true, silent = true })
+  end,
+})
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
