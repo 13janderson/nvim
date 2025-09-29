@@ -34,6 +34,12 @@ vim.o.winborder = "rounded"
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = true
 
+-- sql omnicomplet nonsense
+vim.cmd [[
+    let g:omni_sql_no_default_maps = 1
+]]
+
+
 -- [[ Setting options ]]
 -- See `:help vim.opt`
 -- NOTE: You can change these options as you wish!
