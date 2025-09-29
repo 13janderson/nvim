@@ -45,7 +45,7 @@ local minuet = {
     -- optional, if you are using virtual-text frontend, blink is not required.
     -- { 'Saghen/blink.cmp' },
   },
-  cond = not string.find(vim.fn.getcwd(), "CVS")
+  cond = not string.find(vim.fn.getcwd(), "CVS") and false
 }
 
 
