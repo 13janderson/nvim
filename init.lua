@@ -40,6 +40,12 @@ vim.cmd [[
 ]]
 
 
+-- get file??
+-- puts current file into clipboard
+vim.keymap.set("n", "gl", function()
+  vim.fn.setreg("+", vim.fn.expand "%")
+end)
+
 -- [[ Setting options ]]
 -- See `:help vim.opt`
 -- NOTE: You can change these options as you wish!
@@ -95,8 +101,7 @@ vim.api.nvim_create_autocmd('BufEnter', {
 vim.opt.undofile = true
 
 -- Disable command history q:
-vim.keymap.set('n', 'q:', '<NOP>', { noremap = true, silent = true })
-
+-- vim.keymap.set('n', 'q:', '<NOP>', { noremap = true, silent = true })
 --
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 vim.opt.ignorecase = true
@@ -153,6 +158,7 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 vim.keymap.set("n", "<C-f>", "<cmd>silent !tmux neww tmux-sessionizer.sh<CR>")
 -- Yank to system clipboard
 vim.keymap.set({ "n", "v" }, "<leader>y", [["+y]])
+vim.keymap.set("n", "<leader>fy", 'ggVG"+y<C-O>')
 vim.keymap.set("n", "<leader>e", ":Oil<CR>")
 vim.keymap.set("n", "<leader>Y", [["+Y]])
 vim.keymap.set("n", "<C-d>", "<C-d>zz")
@@ -183,7 +189,7 @@ vim.api.nvim_set_keymap('c', '<C-k>', '<C-p>', { noremap = false })
 -- Map gf to open URLs if it's a link
 vim.keymap.set('n', 'gf', OpenLink, { noremap = true, silent = true })
 
-vim.g.python3_host_prog = "/usr/bin/python3"
+-- vim.g.python3_host_prog = "/usr/bin/python3"
 
 vim.opt.termguicolors = true
 
