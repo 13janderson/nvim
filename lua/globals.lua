@@ -68,3 +68,20 @@ function _G.OpenLink()
     vim.cmd('normal! gf')
   end
 end
+
+function _G.OpenScratch()
+  local bufnr = vim.api.nvim_create_buf(false, true)
+  local winnr = 0
+
+  if vim.api.nvim_buf_get_name(0) ~= "" then
+    vim.api.nvim_open_win(bufnr, false, {
+      split = 'left',
+      win = 0
+    })
+  else
+    vim.api.nvim_set_current_buf(bufnr)
+  end
+
+  vim.api.nvim_set_current_win(winnr)
+end
+
