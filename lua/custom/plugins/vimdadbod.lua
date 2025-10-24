@@ -15,8 +15,7 @@ return {
       })
       vim.g.dbs = {
         nop = 'mysql://root:password@127.0.0.1:3307/CVSBNOP',
-        rds = 'mysql://root:password@127.0.0.1:3306/test_facility',
-
+        rds = 'mysql://root:password@127.0.0.1:3306/test_facility'
       }
     end,
   },
