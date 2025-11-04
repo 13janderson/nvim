@@ -282,6 +282,8 @@ return {
         docker_compose_language_service = {},
         ts_ls = {},
         terraformls = {},
+        -- terraform_lsp = {},
+        tflint = {},
         jsonls = {},
         prismals = {
         },
