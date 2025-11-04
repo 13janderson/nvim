@@ -74,7 +74,7 @@ function _G.OpenScratch()
   local winnr = 0
 
   if vim.api.nvim_buf_get_name(0) ~= "" then
-    vim.api.nvim_open_win(bufnr, false, {
+    winnr = vim.api.nvim_open_win(bufnr, false, {
       split = 'left',
       win = 0
     })
@@ -84,4 +84,3 @@ function _G.OpenScratch()
 
   vim.api.nvim_set_current_win(winnr)
 end
-

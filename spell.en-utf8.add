@@ -2,7 +2,7 @@ DynamoDB
 JSON
 cvs
 specs
-DDB
+#DB
 TypeScript
 submodules
 pigeonholes
@@ -13,3 +13,4 @@ Zod
 Zod
 Zod
 zod
+DDB/!
