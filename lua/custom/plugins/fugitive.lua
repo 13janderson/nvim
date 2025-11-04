@@ -7,7 +7,7 @@ return {
     vim.keymap.set("n", "<leader>)", ":diffget //3<CR>")
 
     -- TODO: can this be made better by hooking into ?user autocommands? of fugitive.
-    vim.keymap.set("n", "<leader>c", function()
+    vim.keymap.set("n", "<leader>co", function()
       DoOnNewBuffer(function()
         -- Only set the lines if a new buffer is made within 2 seconds
         vim.api.nvim_buf_set_lines(0, 0, 1, true, { "feat: " })
@@ -16,6 +16,5 @@ return {
     end)
     vim.keymap.set("n", "[c", "[czz")
     vim.keymap.set("n", "]c", "]czz")
-
   end
 }
