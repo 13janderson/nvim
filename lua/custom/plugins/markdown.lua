@@ -7,10 +7,54 @@ return {
     ---@module 'render-markdown"onedark"'
     ---@type render.md.UserConfig
     opts = {
-      only_render_image_at_cursor = true
+      only_render_image_at_cursor = false
     }
 
   },
+  -- {
+  --   '3rd/image.nvim',
+  --   config = function()
+  --     require("image").setup({
+  --       backend = "kitty",        -- or "ueberzug" or "sixel"
+  --       processor = "magick_cli", -- or "magick_rock"
+  --       integrations = {
+  --         markdown = {
+  --           enabled = true,
+  --           clear_in_insert_mode = false,
+  --           download_remote_images = true,
+  --           only_render_image_at_cursor = false,
+  --           only_render_image_at_cursor_mode = "popup", -- or "inline"
+  --           floating_windows = false,                   -- if true, images will be rendered in floating markdown windows
+  --           filetypes = { "markdown", "vimwiki" },      -- markdown extensions (ie. quarto) can go here
+  --         },
+  --         neorg = {
+  --           enabled = true,
+  --           filetypes = { "norg" },
+  --         },
+  --         typst = {
+  --           enabled = true,
+  --           filetypes = { "typst" },
+  --         },
+  --         html = {
+  --           enabled = false,
+  --         },
+  --         css = {
+  --           enabled = false,
+  --         },
+  --       },
+  --       max_width = nil,
+  --       max_height = nil,
+  --       max_width_window_percentage = nil,
+  --       max_height_window_percentage = 50,
+  --       scale_factor = 1.0,
+  --       window_overlap_clear_enabled = false,                                               -- toggles images when windows are overlapped
+  --       window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "snacks_notif", "scrollview", "scrollview_sign" },
+  --       editor_only_render_when_focused = false,                                            -- auto show/hide images when the editor gains/looses focus
+  --       tmux_show_only_in_active_window = false,                                            -- auto show/hide images in the correct Tmux window (needs visual-activity off)
+  --       hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif" }, -- render image files as images when opened
+  --     })
+  --   end
+  -- },
   {
     "toppair/peek.nvim",
     build = "deno task --quiet build:fast",
@@ -51,7 +95,6 @@ return {
   },
   {
     "epwalsh/obsidian.nvim",
-    -- requires xclip for copying images from clipboard in linux
     version = "*", -- recommended, use latest release instead of latest commit
     -- Replace the above line with this if you only want to load obsidian.nvim for markdown files in your vault:
     cond = vim.startswith(vim.fn.getcwd(), vim.fn.expand "~/vault"),
@@ -140,6 +183,28 @@ return {
         }
       },
 
+      -- TODO customise these keybindings to my liking.
+      picker = {
+        -- Set your preferred picker. Can be one of 'telescope.nvim', 'fzf-lua', or 'mini.pick'.
+        name = "telescope.nvim",
+        -- Optional, configure key mappings for the picker. These are the defaults.
+        -- Not all pickers support all mappings.
+        note_mappings = {
+          -- Create a new note from your query.
+          new = "<C-x>",
+          -- Insert a link to the selected note.
+          insert_link = "<C-l>",
+        },
+        tag_mappings = {
+          -- Add tag(s) to current note.
+          -- Somehow ] feels like tagging?
+          tag_note = "<C-]>",
+          -- Insert a tag at the current location.
+          insert_tag = "<C-l>",
+        },
+      },
+
+
       daily_notes = {
         -- Optional, if you keep daily notes in a separate directory.
         folder = "daily",
@@ -152,6 +217,25 @@ return {
         -- Optional, if you want to automatically insert a template from your template directory like 'daily.md'
         template = "daily.md"
       },
+
+      -- -- Customize the frontmatter data.
+      -- ---@param note obsidian.Note
+      -- ---@return table
+      -- note_frontmatter_func = function(note)
+      --   -- Add the title of the note as an alias.
+      --   local out = { id = note.id, aliases = note.aliases, tags = note.tags }
+      --
+      --   -- `note.metadata` contains any manually added fields in the frontmatter.
+      --   -- So here we just make sure those fields are kept in the frontmatter.
+      --   if note.metadata ~= nil and not vim.tbl_isempty(note.metadata) then
+      --     for k, v in pairs(note.metadata) do
+      --       out[k] = v
+      --     end
+      --   end
+      --
+      --   return out
+      -- end,
+
     },
     config = function(_, opts)
       -- Set a custom colourscheme when this plugin is loaded, gives the illusion
@@ -175,7 +259,6 @@ return {
           print("This feature is only enabled for markdown files")
         end
       end, nil)
-      vim.keymap.set("n", "<cr>", obsidian.util.smart_action, { buffer = true, expr = true })
 
       local jumpToString = function(to)
         -- Jump to first section, i.e. Admin and go into insert mode below it
@@ -208,6 +291,13 @@ return {
         vim.cmd("ObsidianTomorrow")
       end)
 
+      -- Telescope like searching [S]earch [T]ags
+      -- tag_note = "<C-x>",
+      -- insert_tag = "<C-l>",
+      -- Is there a way to get this to multi-select properly?
+      vim.keymap.set("n", "<leader>st", function()
+        vim.cmd("ObsidianTags")
+      end, nil)
 
       -- Auto commands specifically for obsidian related buffers
       vim.api.nvim_create_autocmd('BufNewFile', {

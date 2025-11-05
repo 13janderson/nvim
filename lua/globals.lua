@@ -24,9 +24,36 @@ function _G.DoOnNewBuffer(run, timeout_ms)
     timeout_ms = 5000
   end
 
-  local augroup_name = "OneShotCommand"
+  local augroup_name = "OneShotCommandNewBuffer"
   vim.api.nvim_create_autocmd("BufEnter", {
     callback = run,
+    group = vim.api.nvim_create_augroup(augroup_name, { clear = true }),
+    once = true, -- this command clears itself upon completion
+  })
+  -- Remove the autocmd after timeout
+  vim.defer_fn(function()
+    vim.api.nvim_del_augroup_by_name(augroup_name)
+  end, timeout_ms)
+end
+
+-- Run a function when the next buffer is closed. Takes optional delay in delay_ms
+-- which will be awaited before running the callback if provided.
+-- This is a one-time function
+function _G.DoOnBufferClose(run, timeout_ms, delay_ms)
+  if not timeout_ms then
+    timeout_ms = 5000
+  end
+
+  local augroup_name = "OneShotCommandCloseBuffer"
+  vim.api.nvim_create_autocmd("BufLeave", {
+    callback = function(e)
+      if delay_ms then
+        vim.defer_fn(run, delay_ms)
+        return
+      end
+      print "running function without defer"
+      vim.schedule(run)
+    end,
     group = vim.api.nvim_create_augroup(augroup_name, { clear = true }),
     once = true, -- this command clears itself upon completion
   })
@@ -74,7 +101,7 @@ function _G.OpenScratch()
   local winnr = 0
 
   if vim.api.nvim_buf_get_name(0) ~= "" then
-    vim.api.nvim_open_win(bufnr, false, {
+    winnr = vim.api.nvim_open_win(bufnr, false, {
       split = 'left',
       win = 0
     })
@@ -84,4 +111,3 @@ function _G.OpenScratch()
 
   vim.api.nvim_set_current_win(winnr)
 end
-
