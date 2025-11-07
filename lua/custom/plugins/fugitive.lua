@@ -22,6 +22,7 @@ return {
         callback = function()
           vim.schedule(function() vim.cmd("G push") end)
         end,
+        once = true
       })
       -- DoOnBufferClose(function()
       --   vim.cmd("G push")
