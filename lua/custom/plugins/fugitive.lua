@@ -20,7 +20,7 @@ return {
       vim.api.nvim_create_autocmd("BufWinLeave", {
         pattern = "COMMIT_EDITMSG",
         callback = function()
-          vim.cmd("G push")
+          vim.schedule(function() vim.cmd("G push") end)
         end,
       })
       -- DoOnBufferClose(function()
