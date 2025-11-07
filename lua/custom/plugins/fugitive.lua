@@ -28,11 +28,6 @@ return {
       -- end, 5000)
     end)
 
-    vim.cmd [[
-      G commit -a --no-verify
-      G push
-    ]]
-
     vim.keymap.set("n", "[c", "[czz")
     vim.keymap.set("n", "]c", "]czz")
   end
