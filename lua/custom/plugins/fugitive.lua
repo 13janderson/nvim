@@ -22,7 +22,7 @@ return {
 
       DoOnBufferClose(function()
         vim.cmd("G push")
-      end, 5000)
+      end, 10000)
     end)
 
     -- TODO add keybind for git push too
