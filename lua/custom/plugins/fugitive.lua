@@ -13,19 +13,23 @@ return {
       end, 2000)
       vim.cmd("G commit -a --no-verify")
     end
-    -- TODO: can this be made better by hooking into ?user autocommands? of fugitive.
     vim.keymap.set("n", "<leader>co", fugitive_commit)
 
-    -- TODO: can this be made better by hooking into ?user autocommands? of fugitive.
     vim.keymap.set("n", "<leader>cp", function()
       fugitive_commit()
 
-      DoOnBufferClose(function()
-        vim.cmd("G push")
-      end, 10000)
+      vim.api.nvim_create_autocmd("BufWinLeave", {
+        pattern = "COMMIT_EDITMSG",
+        callback = function()
+          vim.schedule(function() vim.cmd("G push") end)
+        end,
+        once = true
+      })
+      -- DoOnBufferClose(function()
+      --   vim.cmd("G push")
+      -- end, 5000)
     end)
 
-    -- TODO add keybind for git push too
     vim.keymap.set("n", "[c", "[czz")
     vim.keymap.set("n", "]c", "]czz")
   end
