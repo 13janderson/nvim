@@ -46,12 +46,11 @@ function _G.DoOnBufferClose(run, timeout_ms, delay_ms)
 
   local augroup_name = "OneShotCommandCloseBuffer"
   vim.api.nvim_create_autocmd("BufLeave", {
-    callback = function(e)
+    callback = function(_)
       if delay_ms then
         vim.defer_fn(run, delay_ms)
         return
       end
-      print "running function without defer"
       vim.schedule(run)
     end,
     group = vim.api.nvim_create_augroup(augroup_name, { clear = true }),

@@ -17,6 +17,7 @@ return {
 
     vim.keymap.set("n", "<leader>cp", function()
       fugitive_commit()
+
       vim.api.nvim_create_autocmd("BufWinLeave", {
         pattern = "COMMIT_EDITMSG",
         callback = function()
