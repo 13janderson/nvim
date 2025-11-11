@@ -286,6 +286,7 @@ return {
       end)
 
       vim.keymap.set('n', '<M-w>', function()
+        -- This is the dogs bollocks
         local client = obsidian.get_client()
         local weekly_note = client:create_note({
           title = week_commencing(0) .. ".md",
@@ -296,8 +297,6 @@ return {
           line = 10,
           col = 0
         })
-        -- vim.cmd(string.format('ObsidianNew ~/vault/weekly/%s.md', week_commencing(0)))
-        -- vim.cmd('ObsidianTemplate weekly')
       end)
 
       -- Create new daily note
@@ -316,8 +315,8 @@ return {
       end)
 
       -- Telescope like searching [S]earch [T]ags
-      -- tag_note = "<C-x>",
-      -- insert_tag = "<C-l>",
+      -- tag_note = "<C-]>",
+      -- insert_tag = "<C-t>",
       -- Is there a way to get this to multi-select properly?
       vim.keymap.set('n', '<leader>st', function()
         vim.cmd 'ObsidianTags'
