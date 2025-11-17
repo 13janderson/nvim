@@ -1,5 +1,4 @@
 -- "justinmk/guh.nvim"
--- dir = "~/projects/plugins/guh.nvim/",
 return {
   '13janderson/octo.nvim',
   cmd = 'Octo',
@@ -19,6 +18,7 @@ return {
         copy_sha = { lhs = '<NOP>', desc = 'copy commit SHA to system clipboard' },
         checkout_pr = { lhs = '<C-o>', desc = 'checkout pull request' },
         merge_pr = { lhs = '<C-r>', desc = 'merge pull request' },
+        -- close_pr = { lhs = '<C-s>', desc = 'close pull request' },
       },
       snacks = {     -- snacks specific config
         actions = {  -- custom actions for specific snacks pickers (array of tables)
@@ -247,7 +247,7 @@ return {
         select_last_entry = { lhs = ']Q', desc = 'move to last changed file' },
         select_next_unviewed_entry = { lhs = ']u', desc = 'move to next unviewed changed file' },
         select_prev_unviewed_entry = { lhs = '[u', desc = 'move to previous unviewed changed file' },
-        close_review_tab = { lhs = '<C-c>', desc = 'close review tab' },
+        close_review_tab = { lhs = 'q', desc = 'close review tab' },
         react_hooray = { lhs = '<localleader>rp', desc = 'add/remove 🎉 reaction' },
         react_heart = { lhs = '<localleader>rh', desc = 'add/remove ❤️ reaction' },
         react_eyes = { lhs = '<localleader>re', desc = 'add/remove 👀 reaction' },
@@ -263,7 +263,7 @@ return {
         approve_review = { lhs = '<C-a>', desc = 'approve review', mode = { 'n', 'i' } },
         comment_review = { lhs = '<C-m>', desc = 'comment review', mode = { 'n', 'i' } },
         request_changes = { lhs = '<C-r>', desc = 'request changes review', mode = { 'n', 'i' } },
-        close_review_tab = { lhs = '<C-c>', desc = 'close review tab', mode = { 'n', 'i' } },
+        close_review_tab = { lhs = 'q', desc = 'close review tab', mode = { 'n' } },
       },
       review_diff = {
         submit_review = { lhs = '<localleader>vs', desc = 'submit review' },
@@ -280,7 +280,7 @@ return {
         select_last_entry = { lhs = ']Q', desc = 'move to last changed file' },
         select_next_unviewed_entry = { lhs = ']u', desc = 'move to next unviewed changed file' },
         select_prev_unviewed_entry = { lhs = '[u', desc = 'move to previous unviewed changed file' },
-        close_review_tab = { lhs = '<C-c>', desc = 'close review tab' },
+        close_review_tab = { lhs = 'q', desc = 'close review tab' },
         toggle_viewed = { lhs = '<localleader><space>', desc = 'toggle viewer viewed state' },
         goto_file = { lhs = 'gf', desc = 'go to file' },
       },
@@ -299,7 +299,7 @@ return {
         select_last_entry = { lhs = ']Q', desc = 'move to last changed file' },
         select_next_unviewed_entry = { lhs = ']u', desc = 'move to next unviewed changed file' },
         select_prev_unviewed_entry = { lhs = '[u', desc = 'move to previous unviewed changed file' },
-        close_review_tab = { lhs = '<C-c>', desc = 'close review tab' },
+        close_review_tab = { lhs = 'q', desc = 'close review tab' },
         toggle_viewed = { lhs = '<localleader><space>', desc = 'toggle viewer viewed state' },
       },
       notification = {
@@ -346,7 +346,7 @@ return {
         require('octo.utils').create_base_search_command { include_current_repo = true }
       end,
       desc = 'Search GitHub',
-    },
+    }
   },
   dependencies = {
     'nvim-lua/plenary.nvim',
