@@ -180,8 +180,8 @@ vim.keymap.set("x", "<leader>p", [["_dP]])
 -- vim.keymap.set("n", "]dzz", function() vim.diagnostic.jump({ count = -1 }) end)
 
 -- Alternate between bufffers
--- vim.keymap.set('n', '<leader><leader>', '<C-^>', { noremap = false, silent = true })
-vim.keymap.set('n', '<C-p>', '<C-^>', { noremap = false, silent = true })
+vim.keymap.set('n', '<leader><leader>', '<C-^>', { noremap = false, silent = true })
+-- vim.keymap.set('n', '<C-p>', '<C-^>', { noremap = false, silent = true })
 
 -- Resizing buffers keymaps
 local r = 10
