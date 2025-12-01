@@ -108,7 +108,7 @@ return {
     'epwalsh/obsidian.nvim',
     version = '*', -- recommended, use latest release instead of latest commit
     -- Replace the above line with this if you only want to load obsidian.nvim for markdown files in your vault:
-    -- cond = vim.startswith(vim.fn.getcwd(), vim.fn.expand '~/vault'),
+    cond = vim.startswith(vim.fn.getcwd(), vim.fn.expand '~/vault'),
     dependencies = {
       -- Required.
       'nvim-lua/plenary.nvim',
@@ -288,13 +288,14 @@ return {
       vim.keymap.set('n', '<M-w>', function()
         -- This is the dogs bollocks
         local client = obsidian.get_client()
+        local note_title = week_commencing(0) .. ".md"
         local weekly_note = client:create_note({
-          title = week_commencing(0) .. ".md",
+          title = note_title,
           dir = "weekly",
           template = "weekly"
         })
         client:open_note(weekly_note, {
-          line = 10,
+          line = 6,
           col = 0
         })
       end)
