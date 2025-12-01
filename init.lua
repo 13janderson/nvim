@@ -167,9 +167,8 @@ vim.keymap.set("n", "<C-u>", "<C-u>zz")
 -- Not sure I like these
 -- vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
 -- vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
-
---[[ vim.keymap.set("n", "[q", "[qzz")
-vim.keymap.set("n", "]q", "]qzz") ]]
+-- vim.keymap.set("n", "[q", "[qzz")
+-- vim.keymap.set("n", "]q", "]qzz")
 
 vim.keymap.set("n", "n", "nzzzv")
 vim.keymap.set("n", "N", "Nzzzv")
@@ -177,19 +176,18 @@ vim.keymap.set("n", "N", "Nzzzv")
 vim.keymap.set("x", "<leader>p", [["_dP]])
 
 -- Diagnostic errors
---[[ vim.keymap.set("n", "[dzz", function() vim.diagnostic.jump({ count = 1 }) end)
-vim.keymap.set("n", "]dzz", function() vim.diagnostic.jump({ count = -1 }) end) ]]
+-- vim.keymap.set("n", "[dzz", function() vim.diagnostic.jump({ count = 1 }) end)
+-- vim.keymap.set("n", "]dzz", function() vim.diagnostic.jump({ count = -1 }) end)
 
 -- Alternate between bufffers
-vim.keymap.set('n', '<leader><leader>', '<C-^>', { noremap = false, silent = true })
+-- vim.keymap.set('n', '<leader><leader>', '<C-^>', { noremap = false, silent = true })
+vim.keymap.set('n', '<C-p>', '<C-^>', { noremap = false, silent = true })
 
 vim.api.nvim_set_keymap('c', '<C-j>', '<C-n>', { noremap = false })
 vim.api.nvim_set_keymap('c', '<C-k>', '<C-p>', { noremap = false })
 
 -- Map gf to open URLs if it's a link
 vim.keymap.set('n', 'gf', OpenLink, { noremap = true, silent = true })
-
--- vim.g.python3_host_prog = "/usr/bin/python3"
 
 vim.opt.termguicolors = true
 
@@ -203,7 +201,6 @@ vim.api.nvim_create_autocmd('TextYankPost', {
     vim.highlight.on_yank()
   end,
 })
-
 
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
