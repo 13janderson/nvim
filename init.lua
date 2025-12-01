@@ -1,4 +1,4 @@
-require("globals")
+require 'globals'
 --[[
 --
 o====================================================================
@@ -29,7 +29,7 @@ o====================================================================
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
-vim.o.winborder = "rounded"
+vim.o.winborder = 'rounded'
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = true
@@ -39,11 +39,10 @@ vim.cmd [[
     let g:omni_sql_no_default_maps = 1
 ]]
 
-
 -- get file??
 -- puts current file into clipboard
-vim.keymap.set("n", "gl", function()
-  vim.fn.setreg("+", vim.fn.expand "%")
+vim.keymap.set('n', 'gl', function()
+  vim.fn.setreg('+', vim.fn.expand '%')
 end)
 
 -- [[ Setting options ]]
@@ -72,7 +71,7 @@ vim.opt.breakindent = true
 vim.opt.wrap = false
 vim.api.nvim_create_autocmd('BufEnter', {
   desc = 'Turn on linewrap for markdown files',
-  pattern = { "*.md" },
+  pattern = { '*.md' },
   group = vim.api.nvim_create_augroup('MarkdownWrapOn', { clear = true }),
   callback = function()
     vim.opt.wrap = true
@@ -92,7 +91,7 @@ vim.api.nvim_create_autocmd('BufEnter', {
   desc = 'Override buffer format options',
   group = vim.api.nvim_create_augroup('override-formatoptions', { clear = true }),
   callback = function()
-    vim.opt.formatoptions = "jcrql"
+    vim.opt.formatoptions = 'jcrql'
   end,
 })
 
@@ -137,10 +136,10 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- Disable CR keybinding, strange things were happening ngl
 -- vim.keymap.set('n', '<CR>', '<NOP>', { noremap = true, silent = true })
 -- Quickfix list <CR> selection
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "qf",
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'qf',
   callback = function()
-    vim.keymap.set("n", "<CR>", "<CR>", { buffer = true, silent = true })
+    vim.keymap.set('n', '<CR>', '<CR>', { buffer = true, silent = true })
   end,
 })
 
@@ -154,15 +153,15 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 
 -- Primagen keymaps
 -- Tmux sessionizer
-vim.keymap.set("n", "<C-f>", "<cmd>silent !tmux neww tmux-sessionizer.sh<CR>")
-vim.keymap.set("n", "<C-s>", OpenScratch)
+vim.keymap.set('n', '<C-f>', '<cmd>silent !tmux neww tmux-sessionizer.sh<CR>')
+vim.keymap.set('n', '<C-s>', OpenScratch)
 -- Yank to system clipboard
-vim.keymap.set({ "n", "v" }, "<leader>y", [["+y]])
-vim.keymap.set("n", "<leader>Y", 'ggVG"+y<C-O>')
+vim.keymap.set({ 'n', 'v' }, '<leader>y', [["+y]])
+vim.keymap.set('n', '<leader>Y', 'ggVG"+y<C-O>')
 -- vim.keymap.set("n", "<leader>Y", [["+Y]])
-vim.keymap.set("n", "<leader>e", ":Oil<CR>")
-vim.keymap.set("n", "<C-d>", "<C-d>zz")
-vim.keymap.set("n", "<C-u>", "<C-u>zz")
+vim.keymap.set('n', '<leader>e', ':Oil<CR>')
+vim.keymap.set('n', '<C-d>', '<C-d>zz')
+vim.keymap.set('n', '<C-u>', '<C-u>zz')
 
 -- Not sure I like these
 -- vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
@@ -170,23 +169,27 @@ vim.keymap.set("n", "<C-u>", "<C-u>zz")
 -- vim.keymap.set("n", "[q", "[qzz")
 -- vim.keymap.set("n", "]q", "]qzz")
 
-vim.keymap.set("n", "n", "nzzzv")
-vim.keymap.set("n", "N", "Nzzzv")
+vim.keymap.set('n', 'n', 'nzzzv')
+vim.keymap.set('n', 'N', 'Nzzzv')
 -- Paste from buffer but do not overwrite buffer with what we paste over
-vim.keymap.set("x", "<leader>p", [["_dP]])
+vim.keymap.set('x', '<leader>p', [["_dP]])
 
 -- Diagnostic errors
 -- vim.keymap.set("n", "[dzz", function() vim.diagnostic.jump({ count = 1 }) end)
 -- vim.keymap.set("n", "]dzz", function() vim.diagnostic.jump({ count = -1 }) end)
 
 -- Alternate between bufffers
-vim.keymap.set('n', '<leader><leader>', '<C-^>', { noremap = false, silent = true })
--- vim.keymap.set('n', '<C-p>', '<C-^>', { noremap = false, silent = true })
+-- vim.keymap.set('n', '<leader><leader>', '<C-^>', { noremap = false, silent = true })
+vim.keymap.set('n', '<C-p>', '<C-^>', { noremap = false, silent = true })
 
 -- Resizing buffers keymaps
 local r = 10
-vim.keymap.set('n', '<C-W>>', function() vim.api.nvim_win_set_width(0, vim.api.nvim_win_get_width(0) + r) end)
-vim.keymap.set('n', '<C-W><', function() vim.api.nvim_win_set_width(0, vim.api.nvim_win_get_width(0) - r) end)
+vim.keymap.set('n', '<C-W>>', function()
+  vim.api.nvim_win_set_width(0, vim.api.nvim_win_get_width(0) + r)
+end)
+vim.keymap.set('n', '<C-W><', function()
+  vim.api.nvim_win_set_width(0, vim.api.nvim_win_get_width(0) - r)
+end)
 
 vim.api.nvim_set_keymap('c', '<C-j>', '<C-n>', { noremap = false })
 vim.api.nvim_set_keymap('c', '<C-k>', '<C-p>', { noremap = false })
@@ -207,6 +210,31 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   end,
 })
 
+local oil_ex = require 'oil_filexplorer'
+local ex = oil_ex:new()
+
+-- Try to make editor more VSCodey, for ease of co-workers
+-- this function can be used as a toggle using a global variable vscode
+local function vs_code()
+  local vs_code_on = vim.g.vscode or false
+  if vs_code_on then
+    ex:kill()
+    ex = oil_ex:new()
+    vim.cmd 'se relativenumber'
+    -- ColourMyPencils()
+    vim.g.vscode = false
+  else
+    ex:up()
+    -- ColourMyPencils("tokionight")
+    vim.cmd 'se norelativenumber'
+    vim.g.vscode = true
+  end
+  ColourMyLines()
+end
+
+vim.api.nvim_create_user_command('VSCode', vs_code, {})
+vim.keymap.set('n', '<leader>vs', vs_code, { desc = 'Toggle VSCode display with vs_code function.' })
+
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
@@ -219,9 +247,9 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end ---@diagnostic disable-next-line: undefined-field
 vim.opt.rtp:prepend(lazypath)
 
-
 -- NOTE: Here is where you install your plugins.
-require('lazy').setup({
+require('lazy').setup(
+  {
     -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
     -- 'tpope/vim-sleuth', -- Detect tabstop and /hiftwidth automatically
     -- NOTE: Plugins can also be added by using a table,
@@ -235,8 +263,8 @@ require('lazy').setup({
     -- If you prefer to call `setup` explicitly, use:
     --
     {
-      import = "custom/plugins"
-    }
+      import = 'custom/plugins',
+    },
     -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
     --
     -- This is often very useful to both group configuration, as well as handle
@@ -260,6 +288,6 @@ require('lazy').setup({
     change_detection = {
       enabled = true,
       notify = false,
-    }
+    },
   }
 )
