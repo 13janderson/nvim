@@ -183,6 +183,11 @@ vim.keymap.set("x", "<leader>p", [["_dP]])
 -- vim.keymap.set('n', '<leader><leader>', '<C-^>', { noremap = false, silent = true })
 vim.keymap.set('n', '<C-p>', '<C-^>', { noremap = false, silent = true })
 
+-- Resizing buffers keymaps
+local r = 10
+vim.keymap.set('n', '<C-W>>', function() vim.api.nvim_win_set_width(0, vim.api.nvim_win_get_width(0) + r) end)
+vim.keymap.set('n', '<C-W><', function() vim.api.nvim_win_set_width(0, vim.api.nvim_win_get_width(0) - r) end)
+
 vim.api.nvim_set_keymap('c', '<C-j>', '<C-n>', { noremap = false })
 vim.api.nvim_set_keymap('c', '<C-k>', '<C-p>', { noremap = false })
 
