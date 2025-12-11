@@ -15,7 +15,7 @@ function ColourMyPencils(colour)
     vim.cmd.colorscheme 'everforest'
   else
     -- Default
-    vim.cmd.colorscheme 'rose-pine-moon'
+    vim.cmd.colorscheme 'tokionight-storm'
   end
 end
 
@@ -75,6 +75,7 @@ local tokionight = {
         bold = false,
       },
     }
+    -- ColourMyPencils("tokionight")
   end,
 }
 
@@ -120,30 +121,6 @@ local everforest = {
   end,
 }
 
-local oil_ex = require "oil_filexplorer"
-local ex = oil_ex:new()
-
--- Try to make editor more VSCodey, for ease of co-workers
--- this function can be used as a toggle using a global variable vscode
-local function vs_code()
-  local vs_code_on = vim.g.vscode or false
-  if vs_code_on then
-    ex:kill()
-    ex = oil_ex:new()
-    vim.cmd "se relativenumber"
-    -- ColourMyPencils()
-    vim.g.vscode = false
-  else
-    ex:up()
-    -- ColourMyPencils("tokionight")
-    vim.cmd "se norelativenumber"
-    vim.g.vscode = true
-  end
-  ColourMyLines()
-end
-
-vim.api.nvim_create_user_command("VSCode", vs_code, {})
-vim.keymap.set('n', '<leader>vs', vs_code, { desc = 'Toggle VSCode display with vs_code function.' })
 
 return {
   rosepine,
