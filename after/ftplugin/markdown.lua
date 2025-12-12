@@ -8,4 +8,3 @@ vim.schedule(function()
   vim.api.nvim_set_option_value("spelllang", "en_gb", { scope = "local" })
 end)
 
-ColourMyPencils("tokionight")
