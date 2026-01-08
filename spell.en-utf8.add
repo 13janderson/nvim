@@ -2,7 +2,6 @@ DynamoDB
 JSON
 cvs
 specs
-#DB
 TypeScript
 submodules
 pigeonholes
@@ -39,3 +38,17 @@ submodule
 serverless
 resoruces
 architected
+Lifecycle
+lifecycle
+Omarchy
+VPC
+frontend
+rclone
+tiering
+myelin
+rtb
+IPv4
+IGW
+jumpboxes
+serverless
+Powerup
