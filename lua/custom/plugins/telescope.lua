@@ -69,6 +69,10 @@ return {
             hidden = true,
             follow = true,
           },
+          live_grep = {
+            hidden = true,
+            -- follow = true,
+          },
         },
         extensions = {
           ['ui-select'] = {
