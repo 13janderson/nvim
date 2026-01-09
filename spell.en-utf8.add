@@ -2,7 +2,6 @@ DynamoDB
 JSON
 cvs
 specs
-#DB
 TypeScript
 submodules
 pigeonholes
@@ -31,7 +30,14 @@ github
 Hashicorp
 Roadmap
 SAA-C03
+VIN
 MFA
+productionised
+outbox
+submodule
+serverless
+resoruces
+architected
 Lifecycle
 lifecycle
 Omarchy
@@ -44,9 +50,5 @@ rtb
 IPv4
 IGW
 jumpboxes
-#ecompresse
-decompresse/!
 serverless
 Powerup
-#ystme
-systme/!
