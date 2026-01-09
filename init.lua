@@ -153,9 +153,11 @@ vim.api.nvim_create_autocmd('QuickFixCmdPost', {
       if e.valid ~= nil and e.valid == 1 then
         local cmd = string.format('cc %d', i)
         vim.cmd(cmd)
-        break
+        return
       end
     end
+    -- Otherwise just open quickfix list
+    vim.schedule(function() vim.cmd('copen') end)
   end,
 })
 
