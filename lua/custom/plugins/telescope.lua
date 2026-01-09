@@ -101,6 +101,31 @@ return {
       vim.keymap.set('n', '<leader>sm', builtin.marks, { desc = '[S]earch [M]arks' })
       vim.keymap.set('n', '<leader>sp', builtin.spell_suggest, { desc = '[S]earch S[p]ell' })
 
+
+      -- Quickfix telescope pass through
+      -- Send picker entries to quickfix if in telescope picker, otherwise toggle quickfix. Super nice
+      local function toggle_qf()
+        for _, win in ipairs(vim.fn.getwininfo()) do
+          if win.quickfix == 1 then
+            vim.cmd("cclose")
+            return
+          end
+        end
+        vim.cmd("copen")
+      end
+
+      local cq_passthrough = function()
+        local req_act, actions = pcall(require, "telescope.actions")
+        local req_state, actions_state = pcall(require, "telescope.actions.state")
+        if req_act and req_state and actions_state.get_current_picker(vim.api.nvim_get_current_buf()) then
+          -- local ok, builtin = pcall(require, "telescope.builtin")
+          actions.send_to_qflist()
+        else
+          toggle_qf()
+        end
+      end
+      vim.keymap.set('n', '<C-Q>', cq_passthrough, { desc = 'Quickfix Passthrough to telescope or toggle' })
+
       vim.api.nvim_create_user_command("TelescopeColors", function()
         builtin.colorscheme({
           enable_preview = true,

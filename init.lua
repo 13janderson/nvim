@@ -157,7 +157,7 @@ vim.api.nvim_create_autocmd('QuickFixCmdPost', {
       end
     end
     -- Otherwise just open quickfix list
-    vim.schedule(function() vim.cmd('copen') end)
+    -- vim.schedule(function() vim.cmd('copen') end)
   end,
 })
 
