@@ -308,7 +308,7 @@ return {
         local note = weekly_note or (weekly .. '/' .. note_title)
 
         client:open_note(note, {
-          line = 6,
+          line = 9,
           col = 0,
         })
       end)

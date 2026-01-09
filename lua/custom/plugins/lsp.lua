@@ -311,7 +311,7 @@ return {
         docker_compose_language_service = {},
         ts_ls = {},
         terraformls = {},
-        java_language_server = {},
+        -- java_language_server = {},
         -- terraform_lsp = {},
         tflint = {},
         jsonls = {},
