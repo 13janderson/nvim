@@ -1,3 +1,7 @@
+local opts_local_scope = {
+  scope = 'local',
+}
+
 vim.fn.setreg("o", 'yiwoprint()if""hpa: {}hp_')
 vim.fn.setreg("p", 'yiw}iprint()if""hpa: {}hp_')
 vim.fn.setreg("l", 'yiw}ilogger.info()if""hpa: {}hp_')
@@ -20,5 +24,5 @@ errorformat = errorformat .. ',%-C%p^'
 errorformat = errorformat .. ',%+C  %m'
 errorformat = errorformat .. ',%Z  %m'
 
-vim.api.nvim_set_option_value("errorformat", errorformat, OPTS_LOCAL_SCOPE)
-vim.api.nvim_set_option_value('makeprg', 'python -t -u %', OPTS_LOCAL_SCOPE)
+vim.api.nvim_set_option_value("errorformat", errorformat, opts_local_scope)
+vim.api.nvim_set_option_value('makeprg', 'python -t -u %', opts_local_scope)

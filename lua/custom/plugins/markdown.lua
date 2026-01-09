@@ -1,13 +1,13 @@
 local function week_commencing(week_offset)
   week_offset = week_offset or 0 -- 0 = this week, -1 = last week, +1 = next week, etc.
 
-  local t = os.date("*t")
+  local t = os.date '*t'
   local wday = t.wday -- 1 = Sunday, 2 = Monday, ..., 7 = Saturday
 
   local offset_to_monday = (wday == 1) and 6 or (wday - 2)
   local total_days = offset_to_monday - (week_offset * 7)
   local week_start = os.time(t) - (total_days * 24 * 60 * 60)
-  return os.date("%a-%d-%b-%Y", week_start)
+  return os.date('%a-%d-%b-%Y', week_start)
 end
 
 return {
@@ -108,7 +108,7 @@ return {
     'epwalsh/obsidian.nvim',
     version = '*', -- recommended, use latest release instead of latest commit
     -- Replace the above line with this if you only want to load obsidian.nvim for markdown files in your vault:
-    cond = vim.startswith(vim.fn.getcwd(), vim.fn.expand '~/vault'),
+    -- cond = vim.startswith(vim.fn.getcwd(), vim.fn.expand '~/vault'),
     dependencies = {
       -- Required.
       'nvim-lua/plenary.nvim',
@@ -189,8 +189,12 @@ return {
           tomorrow = function()
             return os.date('%Y-%m-%d-%a', os.time() + 86400)
           end,
-          wc = function() return week_commencing(0) end,
-          lwc = function() return week_commencing(-1) end,
+          wc = function()
+            return week_commencing(0)
+          end,
+          lwc = function()
+            return week_commencing(-1)
+          end,
         },
       },
 
@@ -287,16 +291,25 @@ return {
 
       vim.keymap.set('n', '<M-w>', function()
         -- This is the dogs bollocks
+        local weekly = 'weekly'
         local client = obsidian.get_client()
-        local note_title = week_commencing(0) .. ".md"
-        local weekly_note = client:create_note({
-          title = note_title,
-          dir = "weekly",
-          template = "weekly"
-        })
-        client:open_note(weekly_note, {
+        local note_title = week_commencing(0) .. '.md'
+
+        local weekly_note
+
+        if not client:path_is_note(note_title) then
+          weekly_note = client:create_note {
+            title = note_title,
+            dir = weekly,
+            template = weekly,
+          }
+        end
+
+        local note = weekly_note or (weekly .. '/' .. note_title)
+
+        client:open_note(note, {
           line = 6,
-          col = 0
+          col = 0,
         })
       end)
 

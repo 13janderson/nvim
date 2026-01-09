@@ -134,12 +134,28 @@ vim.opt.confirm = false
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
 -- Disable CR keybinding, strange things were happening ngl
--- vim.keymap.set('n', '<CR>', '<NOP>', { noremap = true, silent = true })
+vim.keymap.set('n', '<CR>', '<NOP>', { noremap = true, silent = true })
 -- Quickfix list <CR> selection
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'qf',
   callback = function()
     vim.keymap.set('n', '<CR>', '<CR>', { buffer = true, silent = true })
+  end,
+})
+
+
+-- Quickfix will go to the first quickfix entry automatically. This may not always be a valid quickfix entry.
+-- Autocmd goes over all qf entries and goes to the first valid one.
+vim.api.nvim_create_autocmd('QuickFixCmdPost', {
+  callback = function()
+    local qf = vim.fn.getqflist()
+    for i, e in ipairs(qf) do
+      if e.valid ~= nil and e.valid == 1 then
+        local cmd = string.format('cc %d', i)
+        vim.cmd(cmd)
+        break
+      end
+    end
   end,
 })
 
