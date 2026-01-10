@@ -3,8 +3,8 @@ local opts_local_scope = {
 }
 
 vim.fn.setreg("o", 'yiwoprint()if""hpa: {}hp_')
-vim.fn.setreg("p", 'yiw}iprint()if""hpa: {}hp_')
-vim.fn.setreg("l", 'yiw}ilogger.info()if""hpa: {}hp_')
+vim.fn.setreg("p", 'yiw}koprint()if""hpa: {}hp_')
+vim.fn.setreg("l", 'yiw}kologger.info()if""hpa: {}hp_')
 
 -- Set error format as per https://github.com/idbrii/vim-david/blob/main/compiler/python.vim
 local errorformat = '%A%\\s%#File \"%f\"\\, line %l\\, in%.%#'
