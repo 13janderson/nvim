@@ -25,4 +25,4 @@ errorformat = errorformat .. ',%+C  %m'
 errorformat = errorformat .. ',%Z  %m'
 
 vim.api.nvim_set_option_value("errorformat", errorformat, opts_local_scope)
-vim.api.nvim_set_option_value('makeprg', 'python -t -u %', opts_local_scope)
+vim.api.nvim_set_option_value('makeprg', 'python -t -u', opts_local_scope)

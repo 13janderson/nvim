@@ -261,7 +261,9 @@ return {
       -- Keymappings here
       vim.keymap.set('n', 'gf', obsidian.util.gf_passthrough, nil)
       vim.keymap.set('n', '<M-x>', obsidian.util.toggle_checkbox, nil)
-      vim.keymap.set('n', '<M-i>', function()
+
+      -- Paste printscreen
+      vim.keymap.set('n', '<M-p>', function()
         local filetype = vim.bo.filetype
         if filetype == 'markdown' then
           vim.cmd(string.format('ObsidianPasteImg %s', opts.attachments.img_name_func()))
@@ -273,22 +275,12 @@ return {
         end
       end, nil)
 
-      local jumpToString = function(to)
-        -- Jump to first section, i.e. Admin and go into insert mode below it
-        local termcodes = vim.api.nvim_replace_termcodes(string.format('/%s<CR>', to), true, false, true)
-        vim.api.nvim_feedkeys(termcodes, 'n', false)
-        Clear(250)
-      end
-
-      local learnJumpTo = function()
-        jumpToString 'Overview'
-      end
-
       -- Create new note from a template
       vim.keymap.set('n', '<M-n>', function()
         vim.cmd 'ObsidianNewFromTemplate'
       end)
 
+      -- Go to current weekly note, creating it if needed.
       vim.keymap.set('n', '<M-w>', function()
         -- This is the dogs bollocks
         local weekly = 'weekly'
@@ -296,7 +288,6 @@ return {
         local note_title = week_commencing(0) .. '.md'
 
         local weekly_note
-
         if not client:path_is_note(note_title) then
           weekly_note = client:create_note {
             title = note_title,
@@ -311,6 +302,35 @@ return {
           line = 9,
           col = 0,
         })
+      end)
+
+      local new_note_dir = function(dir)
+        local client = obsidian.get_client()
+
+        local ok, note_title = pcall(function()
+          return vim.fn.input(dir .. '/')
+        end)
+        if ok then
+          if not client:path_is_note(note_title) then
+            local idea_note = client:create_note {
+              title = note_title,
+              id = note_title,
+              dir = dir
+            }
+            client:open_note(idea_note, {
+              line = 8,
+              col = 0,
+            })
+          end
+        end
+      end
+
+      vim.keymap.set('n', '<M-i>', function()
+        new_note_dir('2_ideas')
+      end)
+
+      vim.keymap.set('n', '<M-s>', function()
+        new_note_dir('1_source_material')
       end)
 
       -- Create new daily note
