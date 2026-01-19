@@ -299,8 +299,9 @@ return {
         local note = weekly_note or (weekly .. '/' .. note_title)
 
         client:open_note(note, {
-          line = 9,
-          col = 0,
+          callback = function(_)
+            vim.api.nvim_win_set_cursor(0, { 9, 1 })
+          end
         })
       end)
 
