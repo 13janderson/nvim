@@ -300,7 +300,7 @@ return {
 
         client:open_note(note, {
           callback = function(_)
-            vim.api.nvim_win_set_cursor(0, { 9, 1 })
+            vim.schedule(function() vim.api.nvim_win_set_cursor(0, { 9, 0 }) end)
           end
         })
       end)
