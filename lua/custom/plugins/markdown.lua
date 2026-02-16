@@ -108,7 +108,7 @@ return {
     'epwalsh/obsidian.nvim',
     version = '*', -- recommended, use latest release instead of latest commit
     -- Replace the above line with this if you only want to load obsidian.nvim for markdown files in your vault:
-    cond = vim.startswith(vim.fn.getcwd(), vim.fn.expand '~/vault'),
+    -- cond = vim.startswith(vim.fn.getcwd(), vim.fn.expand '~/vault'),
     dependencies = {
       -- Required.
       'nvim-lua/plenary.nvim',
@@ -280,15 +280,31 @@ return {
         vim.cmd 'ObsidianNewFromTemplate'
       end)
 
+      local client = obsidian.get_client()
+
+      local has_obsidian_note = function(term)
+        local notes = client:find_notes(term)
+
+        for _, note in ipairs(notes) do
+          local fname = note:fname()
+          if note ~= nil and fname == term then
+            return true
+          end
+        end
+
+        return false
+      end
+
       -- Go to current weekly note, creating it if needed.
       vim.keymap.set('n', '<M-w>', function()
         -- This is the dogs bollocks
         local weekly = 'weekly'
-        local client = obsidian.get_client()
         local note_title = week_commencing(0) .. '.md'
 
         local weekly_note
-        if not client:path_is_note(note_title) then
+
+        if not has_obsidian_note(note_title) then
+          print "creating note again"
           weekly_note = client:create_note {
             title = note_title,
             dir = weekly,
@@ -306,13 +322,11 @@ return {
       end)
 
       local new_note_dir = function(dir)
-        local client = obsidian.get_client()
-
         local ok, note_title = pcall(function()
           return vim.fn.input(dir .. '/')
         end)
         if ok then
-          if not client:path_is_note(note_title) then
+          if not has_obsidian_note(note_title) then
             local idea_note = client:create_note {
               title = note_title,
               id = note_title,
