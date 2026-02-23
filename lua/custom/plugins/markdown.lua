@@ -1,6 +1,5 @@
 local function week_commencing(week_offset)
   week_offset = week_offset or 0 -- 0 = this week, -1 = last week, +1 = next week, etc.
-
   local t = os.date '*t'
   local wday = t.wday -- 1 = Sunday, 2 = Monday, ..., 7 = Saturday
 
