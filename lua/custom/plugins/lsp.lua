@@ -318,6 +318,56 @@ return {
         prismals = {
         },
         yamlls = {
+          settings = {
+            yaml = {
+              validate = true,
+              completion = true,
+              hover = true,
+              schemaStore = {
+                enable = false, -- important: prevents schema conflicts
+                url = "",
+              },
+              schemas = {
+                -- dbt model schema.yml files
+                ["https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/main/schemas/latest/dbt_yml_files-latest.json"] = {
+                  "**/*.yml", -- include all YAML…
+                  "!profiles.yml", -- …except profiles
+                  "!dbt_project.yml", -- …and dbt project (handled below)
+                  "!packages.yml",
+                  "!selectors.yml",
+                  "!profile_template.yml",
+                  "!package-lock.yml",
+                },
+
+                -- dbt project config
+                ["https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/main/schemas/latest/dbt_project-latest.json"] = {
+                  "dbt_project.yml",
+                },
+
+                -- packages and selectors (optional)
+                ["https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/main/schemas/latest/packages-latest.json"] = {
+                  "packages.yml",
+                },
+                ["https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/main/schemas/latest/selectors-latest.json"] = {
+                  "selectors.yml",
+                },
+              },
+            },
+          },
+          -- settings = {
+          --   yaml = {
+          --     schemas = {
+          --       ["https://schemas.getdbt.com/dbt/schema.json"] = {
+          --         "models/**/*.yml",
+          --         "models/**/*.yaml",
+          --         "dbt_project.yml",
+          --       },
+          --     },
+          --     validate = true,
+          --     completion = true,
+          --     hover = true,
+          --   },
+          -- },
           -- settings = {
           --   yaml = {
           --     schemas = {
