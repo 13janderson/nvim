@@ -83,7 +83,11 @@ return {
       qf_navigate 'next'
     end)
 
-    vim.keymap.set('n', '<leader>gd', function()
+    local pre_diff_bufnr = nil
+
+
+    vim.keymap.set('n', '<leader>df', function()
+      pre_diff_bufnr = vim.api.nvim_get_current_buf()
       vim.api.nvim_create_autocmd('BufWinEnter', {
         callback = function(e)
           if vim.bo[e.buf].buftype == 'quickfix' then
@@ -96,6 +100,17 @@ return {
         once = true,
       })
       vim.cmd 'G difftool'
+    end)
+
+    -- Stop the diff and go back to the buffer that we were once at
+    vim.keymap.set('n', '<leader>dF', function()
+      vim.cmd 'only'
+      if pre_diff_bufnr then
+        vim.api.nvim_set_current_buf(pre_diff_bufnr)
+        pre_diff_bufnr = nil
+        local qfbufnr = vim.fn.getqflist({ qfbufnr = 0 }).qfbufnr
+        pcall(vim.api.nvim_buf_del_var, qfbufnr, difftool_var)
+      end
     end)
   end,
 }

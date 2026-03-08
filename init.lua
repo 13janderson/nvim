@@ -77,7 +77,7 @@ vim.api.nvim_create_autocmd('BufEnter', {
     vim.opt.wrap = true
   end,
 })
-
+--
 -- Nicer tabs
 vim.opt.expandtab = true
 vim.opt.shiftwidth = 2
