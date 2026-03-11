@@ -77,7 +77,7 @@ vim.api.nvim_create_autocmd('BufEnter', {
     vim.opt.wrap = true
   end,
 })
-
+--
 -- Nicer tabs
 vim.opt.expandtab = true
 vim.opt.shiftwidth = 2
@@ -168,6 +168,7 @@ vim.api.nvim_create_autocmd('QuickFixCmdPost', {
 -- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+vim.keymap.set('t', '<C-]><C-n>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 -- Primagen keymaps
 -- Tmux sessionizer
