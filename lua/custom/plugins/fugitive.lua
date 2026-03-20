@@ -84,33 +84,48 @@ return {
     end)
 
     local pre_diff_bufnr = nil
+    local is_qf_open = function()
+      local wins = vim.api.nvim_tabpage_list_wins(0)
+      for _, win in ipairs(wins) do
+        if vim.fn.win_gettype(win) == "quickfix" then
+          return true
+        end
+      end
+      return false
+    end
+
 
 
     vim.keymap.set('n', '<leader>df', function()
-      pre_diff_bufnr = vim.api.nvim_get_current_buf()
-      vim.api.nvim_create_autocmd('BufWinEnter', {
-        callback = function(e)
-          if vim.bo[e.buf].buftype == 'quickfix' then
-            vim.api.nvim_buf_set_var(e.buf, difftool_var, true)
-            vim.schedule(function()
-              vim.cmd(diffsplit_cmd)
-            end)
-          end
-        end,
-        once = true,
-      })
-      vim.cmd 'G difftool'
+      if is_qf_open() then
+        vim.cmd 'only'
+        -- Stop the diff and go back to the buffer that we were once at
+        if pre_diff_bufnr then
+          vim.api.nvim_set_current_buf(pre_diff_bufnr)
+          pre_diff_bufnr = nil
+          local qfbufnr = vim.fn.getqflist({ qfbufnr = 0 }).qfbufnr
+          pcall(vim.api.nvim_buf_del_var, qfbufnr, difftool_var)
+        end
+      else
+        pre_diff_bufnr = vim.api.nvim_get_current_buf()
+        vim.api.nvim_create_autocmd('BufWinEnter', {
+          callback = function(e)
+            if vim.bo[e.buf].buftype == 'quickfix' then
+              vim.api.nvim_buf_set_var(e.buf, difftool_var, true)
+              vim.schedule(function()
+                vim.cmd(diffsplit_cmd)
+              end)
+            end
+          end,
+          once = true,
+        })
+        vim.cmd('G difftool')
+      end
     end)
 
-    -- Stop the diff and go back to the buffer that we were once at
+    -- diff something specific
     vim.keymap.set('n', '<leader>dF', function()
-      vim.cmd 'only'
-      if pre_diff_bufnr then
-        vim.api.nvim_set_current_buf(pre_diff_bufnr)
-        pre_diff_bufnr = nil
-        local qfbufnr = vim.fn.getqflist({ qfbufnr = 0 }).qfbufnr
-        pcall(vim.api.nvim_buf_del_var, qfbufnr, difftool_var)
-      end
+      vim.api.nvim_feedkeys(':G difftool ', 'n', false)
     end)
   end,
 }
