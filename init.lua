@@ -46,7 +46,7 @@ vim.keymap.set('n', 'gl', function()
 end)
 
 -- Enable ui2 Avoids "Press ENTER" interruptions.
-require('vim._core.ui2').enable({})
+-- require('vim._core.ui2').enable({})
 
 -- [[ Setting options ]]
 -- See `:help vim.opt`

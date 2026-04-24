@@ -98,7 +98,9 @@ return {
 
     vim.keymap.set('n', '<leader>df', function()
       if is_qf_open() then
+        vim.cmd 'diffoff!'
         vim.cmd 'only'
+        close_fugitive_diffs()
         -- Stop the diff and go back to the buffer that we were once at
         if pre_diff_bufnr then
           vim.api.nvim_set_current_buf(pre_diff_bufnr)
