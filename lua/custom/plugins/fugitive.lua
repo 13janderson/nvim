@@ -95,40 +95,50 @@ return {
       return false
     end
 
+    local function diff_toggle_off()
+      vim.cmd 'diffoff!'
+      vim.cmd 'only'
+      close_fugitive_diffs()
+      if pre_diff_bufnr then
+        vim.api.nvim_set_current_buf(pre_diff_bufnr)
+        pre_diff_bufnr = nil
+        local qfbufnr = vim.fn.getqflist({ qfbufnr = 0 }).qfbufnr
+        pcall(vim.api.nvim_buf_del_var, qfbufnr, difftool_var)
+      end
+    end
 
+    local function diff_toggle_on()
+      pre_diff_bufnr = vim.api.nvim_get_current_buf()
+      vim.api.nvim_create_autocmd('BufWinEnter', {
+        callback = function(e)
+          if vim.bo[e.buf].buftype == 'quickfix' then
+            vim.api.nvim_buf_set_var(e.buf, difftool_var, true)
+            vim.schedule(function()
+              vim.cmd(diffsplit_cmd)
+            end)
+          end
+        end,
+        once = true,
+      })
+    end
 
     vim.keymap.set('n', '<leader>df', function()
       if is_qf_open() then
-        vim.cmd 'diffoff!'
-        vim.cmd 'only'
-        close_fugitive_diffs()
-        -- Stop the diff and go back to the buffer that we were once at
-        if pre_diff_bufnr then
-          vim.api.nvim_set_current_buf(pre_diff_bufnr)
-          pre_diff_bufnr = nil
-          local qfbufnr = vim.fn.getqflist({ qfbufnr = 0 }).qfbufnr
-          pcall(vim.api.nvim_buf_del_var, qfbufnr, difftool_var)
-        end
+        diff_toggle_off()
       else
-        pre_diff_bufnr = vim.api.nvim_get_current_buf()
-        vim.api.nvim_create_autocmd('BufWinEnter', {
-          callback = function(e)
-            if vim.bo[e.buf].buftype == 'quickfix' then
-              vim.api.nvim_buf_set_var(e.buf, difftool_var, true)
-              vim.schedule(function()
-                vim.cmd(diffsplit_cmd)
-              end)
-            end
-          end,
-          once = true,
-        })
+        diff_toggle_on()
         vim.cmd('G difftool')
       end
     end)
 
     -- diff something specific
     vim.keymap.set('n', '<leader>dF', function()
-      vim.api.nvim_feedkeys(':G difftool ', 'n', false)
+      if is_qf_open() then
+        diff_toggle_off()
+      else
+        diff_toggle_on()
+        vim.api.nvim_feedkeys(':G difftool ', 'n', false)
+      end
     end)
   end,
 }
