@@ -172,6 +172,7 @@ vim.api.nvim_create_autocmd('QuickFixCmdPost', {
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 vim.keymap.set('t', '<C-]><C-n>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+vim.keymap.set('t', '<C-]>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 -- Primagen keymaps
 -- Tmux sessionizer
