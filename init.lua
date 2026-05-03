@@ -31,6 +31,35 @@ o====================================================================
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
+-- Disable treesitter highlighting for markdown files
+-- This prevents the conceal_line / range nil value errors
+-- Use FileType event with high priority to run BEFORE treesitter attaches
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'markdown',
+  callback = function(args)
+    -- Stop treesitter immediately
+    vim.treesitter.stop(args.buf)
+    -- Disable treesitter highlight for this buffer
+    vim.b[args.buf].ts_highlight = false
+    -- Ensure syntax is set to use regex highlighting
+    vim.bo[args.buf].syntax = 'markdown'
+  end,
+})
+
+-- GLOBAL PATCH: Wrap the highlighter's on_start to catch errors
+-- This prevents the crash from propagating
+local ok, highlighter = pcall(require, 'vim.treesitter.highlighter')
+if ok and highlighter then
+  local orig_on_start = highlighter._on_start
+  highlighter._on_start = function(...)
+    local ok2, err = pcall(orig_on_start, ...)
+    if not ok2 then
+      -- Silently ignore treesitter errors
+      return
+    end
+  end
+end
+
 vim.o.winborder = 'rounded'
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
@@ -48,7 +77,7 @@ vim.keymap.set('n', 'gl', function()
 end)
 
 -- Enable ui2 Avoids "Press ENTER" interruptions.
--- require('vim._core.ui2').enable({})
+require('vim._core.ui2').enable({})
 
 -- [[ Setting options ]]
 -- See `:help vim.opt`
@@ -104,7 +133,9 @@ vim.api.nvim_create_autocmd('BufEnter', {
 vim.opt.undofile = true
 
 -- Disable command history q:
-vim.keymap.set('n', 'q:', '<NOP>', { noremap = true, silent = true })
+-- this makes macros and quiting slow
+-- vim.keymap.set('n', 'q:', '<NOP>', { noremap = true, silent = true })
+
 --
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 vim.opt.ignorecase = true
