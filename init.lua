@@ -104,7 +104,7 @@ vim.api.nvim_create_autocmd('BufEnter', {
 vim.opt.undofile = true
 
 -- Disable command history q:
--- vim.keymap.set('n', 'q:', '<NOP>', { noremap = true, silent = true })
+vim.keymap.set('n', 'q:', '<NOP>', { noremap = true, silent = true })
 --
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 vim.opt.ignorecase = true
@@ -180,7 +180,8 @@ vim.keymap.set('t', '<C-]>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 -- Tmux sessionizer
 vim.keymap.set('n', '<C-f>', '<cmd>silent !tmux neww tmux-sessionizer.sh<CR>')
 vim.keymap.set('n', "<leader>x", ToggleScratch)
--- Yank to system clipboardii
+
+-- Yank to system clipboard
 vim.keymap.set({ 'n', 'v' }, '<leader>y', [["+y]])
 vim.keymap.set('n', '<leader>Y', 'ggVG"+y<C-O>')
 -- vim.keymap.set("n", "<leader>Y", [["+Y]])
