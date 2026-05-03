@@ -199,16 +199,6 @@ vim.api.nvim_create_autocmd({ "BufEnter", "TermEnter", "TermLeave" }, {
       end
       vim.fn.chdir(cwd)
     else
-      -- -- Regular buffer: use the buffer's directory
-      -- local bufname = vim.api.nvim_buf_get_name(0)
-      -- if bufname == "" then
-      --   return
-      -- end
-      -- local dir = vim.fn.fnamemodify(bufname, ":h")
-      -- if vim.fn.isdirectory(dir) == 0 then
-      --   return
-      -- end
-      print("last_buffer_cwd", last_buffer_cwd)
       vim.fn.chdir(last_buffer_cwd)
     end
   end,
