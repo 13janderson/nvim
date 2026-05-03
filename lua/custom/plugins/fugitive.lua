@@ -123,7 +123,7 @@ return {
         })
       end
 
-      vim.keymap.set('n', '<leader>df', function()
+      vim.keymap.set('n', 'Uf', function()
         if is_qf_open() then
           diff_toggle_off()
         else
@@ -133,7 +133,7 @@ return {
       end)
 
       -- diff something specific
-      vim.keymap.set('n', '<leader>dF', function()
+      vim.keymap.set('n', 'UF', function()
         if is_qf_open() then
           diff_toggle_off()
         else
