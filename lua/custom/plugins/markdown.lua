@@ -19,6 +19,10 @@ return {
     ---@type render.md.UserConfig
     opts = {
       only_render_image_at_cursor = false,
+      -- Disable render-markdown in insert mode to avoid treesitter conflicts
+      render_modes = { 'n', 'c' },
+      -- Ensure parser is available before rendering
+      preset = 'none',
     },
   },
   -- {

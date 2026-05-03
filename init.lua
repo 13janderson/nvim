@@ -1,5 +1,6 @@
 require 'globals'
 require 'custom.my.ctrl_s_shell'
+require 'custom.my.opencode'
 --[[
 --
 o====================================================================
