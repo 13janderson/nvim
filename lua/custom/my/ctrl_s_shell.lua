@@ -1,15 +1,33 @@
 vim.cmd [[
 " :shell
 "
-" Creates a global default :shell with maximum 'scrollback'.
+" Creates a per-pwd toggleable terminal with maximum 'scrollback'.
+" Each working directory gets its own terminal buffer, useful for git worktrees.
+"
+" Storage for per-pwd terminals: g:term_shell_by_pwd[pwd] = { bufnr, prevwid }
 func! s:ctrl_s(cnt, here) abort
-  let g:term_shell = get(g:, 'term_shell', { 'prevwid': win_getid() })
-  let b = bufnr(':shell')
+  let pwd = getcwd()
+  let g:term_shell_by_pwd = get(g:, 'term_shell_by_pwd', {})
+  
+  " Get or create terminal info for current pwd
+  if !has_key(g:term_shell_by_pwd, pwd)
+    let g:term_shell_by_pwd[pwd] = { 'bufnr': -1, 'prevwid': win_getid() }
+  endif
+  
+  let term_info = g:term_shell_by_pwd[pwd]
+  let b = term_info.bufnr
+  let bufname = ':shell:' . pwd
+
+  " Validate buffer still exists (might have been deleted)
+  if b > 0 && !bufexists(b)
+    let b = -1
+    let term_info.bufnr = -1
+  endif
 
   if bufexists(b) && a:here  " Edit the :shell buffer in this window.
     exe 'buffer' b
     setlocal nobuflisted
-    let g:term_shell.prevwid = win_getid()
+    let term_info.prevwid = win_getid()
     return
   endif
 
@@ -19,7 +37,7 @@ func! s:ctrl_s(cnt, here) abort
   if bufnr('%') == b
     let tab = tabpagenr()
     let term_prevwid = win_getid()
-    if !win_gotoid(g:term_shell.prevwid)
+    if !win_gotoid(term_info.prevwid)
       wincmd p
     endif
     if tabpagewinnr(tab, '$') == 1 && tabpagenr() != tab
@@ -44,7 +62,7 @@ func! s:ctrl_s(cnt, here) abort
         return
       endif
     endif
-    let g:term_shell.prevwid = term_prevwid
+    let term_info.prevwid = term_prevwid
 
     return
   endif
@@ -53,9 +71,9 @@ func! s:ctrl_s(cnt, here) abort
   " Go to existing :shell or create a new one.
   "
   let curwinid = win_getid()
-  if a:cnt == 0 && bufexists(b) && winbufnr(g:term_shell.prevwid) == b
+  if a:cnt == 0 && bufexists(b) && winbufnr(term_info.prevwid) == b
     " Go to :shell displayed in the previous window.
-    call win_gotoid(g:term_shell.prevwid)
+    call win_gotoid(term_info.prevwid)
   elseif bufexists(b)
     " Go to existing :shell.
 
@@ -77,14 +95,15 @@ func! s:ctrl_s(cnt, here) abort
     endif
 
     if &buftype !=# 'terminal' && getline(1) == '' && line('$') == 1
-      call win_gotoid(g:term_shell.prevwid)
+      call win_gotoid(term_info.prevwid)
       " XXX: cleanup stale, empty :shell buffer (caused by :mksession).
       exe 'bwipeout!' b
+      let term_info.bufnr = -1
       " Try again.
       call s:ctrl_s(a:cnt, a:here)
     end
   else
-    " Create new :shell.
+    " Create new :shell for this pwd.
 
     let origbuf = bufnr('%')
     if !a:here
@@ -92,19 +111,37 @@ func! s:ctrl_s(cnt, here) abort
     endif
     terminal
     setlocal scrollback=-1
-    " TODO: call nvim_buf_set_name(0, bufname('%') .. '#shell')
-    file :shell
+    " Name the buffer with pwd context
+    exe 'file ' . fnameescape(bufname)
+    " Store the buffer number for this pwd
+    let term_info.bufnr = bufnr('%')
     " XXX: original term:// buffer hangs around after :file ...
     bwipeout! #
-    autocmd VimLeavePre * bwipeout! ^:shell$
+    " Set up cleanup on vim leave for this buffer
+    exe 'autocmd VimLeavePre * bwipeout! ' . fnameescape(bufname)
     " Set alternate buffer to something intuitive.
     let @# = origbuf
     tnoremap <buffer> <C-s> <C-\><C-n>:call <SID>ctrl_s(0, v:false)<CR>
   endif
 
-  let g:term_shell.prevwid = curwinid
+  let term_info.prevwid = curwinid
   setlocal nobuflisted
 endfunc
 nnoremap <C-s> :<C-u>call <SID>ctrl_s(v:count, v:false)<CR>
 nnoremap '<C-s> :<C-u>call <SID>ctrl_s(v:count, v:true)<CR>
+
+" Optional: Command to list all active pwd terminals
+func! s:list_shells() abort
+  let shells = get(g:, 'term_shell_by_pwd', {})
+  if empty(shells)
+    echo "No active shells"
+    return
+  endif
+  echo "Active shells by directory:"
+  for [pwd, info] in items(shells)
+    let exists = bufexists(info.bufnr) ? 'active' : 'stale'
+    echo '  [' . exists . '] ' . pwd
+  endfor
+endfunc
+command! Shells call s:list_shells()
 ]]

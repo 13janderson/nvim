@@ -95,13 +95,31 @@ function _G.OpenLink()
   end
 end
 
-function _G.OpenScratch()
-  local bufnr = vim.api.nvim_create_buf(false, true)
+function _G.ToggleScratch()
+  local scratch_name = "__scratch__"
+  local existing_bufnr = nil
+
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_get_name(buf):match(scratch_name .. "$") then
+      existing_bufnr = buf
+      break
+    end
+  end
+
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_get_buf(win) == existing_bufnr then
+      vim.api.nvim_win_close(win, false)
+      return
+    end
+  end
+
+  local bufnr = existing_bufnr or vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_name(bufnr, scratch_name)
   local winnr = 0
 
   if vim.api.nvim_buf_get_name(0) ~= "" then
     winnr = vim.api.nvim_open_win(bufnr, false, {
-      split = 'left',
+      split = 'above',
       win = 0
     })
   else
