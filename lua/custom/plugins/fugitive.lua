@@ -148,6 +148,11 @@ return {
     config = function()
       -- override this keymap for alternating between files
       vim.keymap.set('n', '<c-p>', '<c-^>', { noremap = false, silent = true })
+      local push = function()
+        vim.cmd 'G push --no-verify'
+      end
+      vim.keymap.set('n', 'Up', push, { noremap = false, silent = true })
+      vim.keymap.set('n', 'UP', push, { noremap = false, silent = true })
     end,
   },
 }
