@@ -176,6 +176,44 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 vim.keymap.set('t', '<C-]><C-n>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 vim.keymap.set('t', '<C-]>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
+local last_buffer_cwd = nil
+
+vim.api.nvim_create_autocmd({ "BufLeave" }, {
+  callback = function()
+    if vim.bo.buftype ~= "terminal" then
+      last_buffer_cwd = vim.uv.cwd()
+    end
+  end
+})
+vim.api.nvim_create_autocmd({ "BufEnter", "TermEnter", "TermLeave" }, {
+  desc = "cd to buffer cwd on enter",
+  callback = function()
+    if vim.bo.buftype == "terminal" then
+      -- Terminal buffer: use /proc/<pid>/cwd
+      if vim.b.terminal_job_pid == nil then
+        return
+      end
+      local cwd = vim.fn.resolve("/proc/" .. vim.b.terminal_job_pid .. "/cwd")
+      if vim.fn.isdirectory(cwd) == 0 then
+        return
+      end
+      vim.fn.chdir(cwd)
+    else
+      -- -- Regular buffer: use the buffer's directory
+      -- local bufname = vim.api.nvim_buf_get_name(0)
+      -- if bufname == "" then
+      --   return
+      -- end
+      -- local dir = vim.fn.fnamemodify(bufname, ":h")
+      -- if vim.fn.isdirectory(dir) == 0 then
+      --   return
+      -- end
+      print("last_buffer_cwd", last_buffer_cwd)
+      vim.fn.chdir(last_buffer_cwd)
+    end
+  end,
+})
+
 -- Primagen keymaps
 -- Tmux sessionizer
 vim.keymap.set('n', '<C-f>', '<cmd>silent !tmux neww tmux-sessionizer.sh<CR>')

@@ -9,6 +9,37 @@ func! s:ctrl_s(cnt, here) abort
   let pwd = getcwd()
   let g:term_shell_by_pwd = get(g:, 'term_shell_by_pwd', {})
   
+  " If we're already in a terminal buffer, just go back to the previous window
+  " instead of spawning a new terminal for a different cwd
+  if &buftype ==# 'terminal'
+    let tab = tabpagenr()
+    let term_prevwid = win_getid()
+    let curbuf = bufnr('%')
+    
+    " Try to find the terminal info for this buffer to get prevwid
+    let term_info = {}
+    for [p, info] in items(g:term_shell_by_pwd)
+      if info.bufnr == curbuf
+        let term_info = info
+        break
+      endif
+    endfor
+    
+    if !empty(term_info) && win_gotoid(term_info.prevwid)
+      " Successfully went back to previous window
+    else
+      " Fallback: try wincmd p
+      wincmd p
+    endif
+    
+    if tabpagewinnr(tab, '$') == 1 && tabpagenr() != tab
+      " Close the terminal tabpage if it's the only window in the tabpage.
+      exe 'tabclose' tab
+    endif
+    
+    return
+  endif
+  
   " Get or create terminal info for current pwd
   if !has_key(g:term_shell_by_pwd, pwd)
     let g:term_shell_by_pwd[pwd] = { 'bufnr': -1, 'prevwid': win_getid() }
