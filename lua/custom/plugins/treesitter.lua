@@ -2,9 +2,9 @@ return {
   {
     'nvim-treesitter/nvim-treesitter-context',
     config = function()
-      vim.keymap.set('n', 'gt', function()
-        require('treesitter-context').go_to_context(vim.v.count1)
-      end, { silent = true })
+      -- vim.keymap.set('n', 'gt', function()
+      --   require('treesitter-context').go_to_context(vim.v.count1)
+      -- end, { silent = true })
       require('treesitter-context').setup {
         opts = {
           enable = true,
@@ -79,11 +79,11 @@ return {
       }
       local alreadyInstalled = require('nvim-treesitter.config').get_installed()
       local parsersToInstall = vim
-        .iter(ensureInstalled)
-        :filter(function(parser)
-          return not vim.tbl_contains(alreadyInstalled, parser)
-        end)
-        :totable()
+          .iter(ensureInstalled)
+          :filter(function(parser)
+            return not vim.tbl_contains(alreadyInstalled, parser)
+          end)
+          :totable()
       require('nvim-treesitter').install(parsersToInstall)
     end,
     -- Autoinstall languages that are not installed

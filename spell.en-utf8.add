@@ -71,3 +71,4 @@ backend
 config/!
 config
 Monzo
+Neovim

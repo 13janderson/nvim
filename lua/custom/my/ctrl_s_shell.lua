@@ -2,49 +2,140 @@ vim.cmd [[
 " :shell
 "
 " Creates a per-pwd toggleable terminal with maximum 'scrollback'.
-" Each working directory gets its own terminal buffer, useful for git worktrees.
+" Only ONE terminal buffer is visible at a time globally - opening a terminal
+" for a pwd closes/hides any other visible terminal windows.
 "
-" Storage for per-pwd terminals: g:term_shell_by_pwd[pwd] = { bufnr, prevwid }
+" Storage for per-pwd terminals: g:term_shell_by_pwd[pwd] = { bufnr, prevwid, prevtab, prevbuf }
+
+" Close all other visible terminal windows except the current one
+func! s:close_other_terminals(current_buf) abort
+  " Ensure g:term_shell_by_pwd is a proper Vim dictionary (not Lua table)
+  if !exists('g:term_shell_by_pwd') || type(g:term_shell_by_pwd) != type({})
+    let g:term_shell_by_pwd = {}
+  endif
+
+  " Find all terminal buffers we're tracking
+  let tracked_bufs = []
+  for info in values(g:term_shell_by_pwd)
+    if info.bufnr > 0 && bufexists(info.bufnr)
+      call add(tracked_bufs, info.bufnr)
+    endif
+  endfor
+
+  " Find all windows showing tracked terminal buffers (except current)
+  for buf in tracked_bufs
+    if buf == a:current_buf
+      continue
+    endif
+
+    " Find all windows showing this buffer
+    let wins = win_findbuf(buf)
+    for winid in wins
+      " Go to that window and close it
+      let prev_win = win_getid()
+      if win_gotoid(winid)
+        " If it's the only window in the tab, close the tab
+        if winnr('$') == 1 && tabpagenr('$') > 1
+          close
+        else
+          " Hide the buffer and close the window
+          hide
+        endif
+        " Try to go back to previous window
+        call win_gotoid(prev_win)
+      endif
+    endfor
+  endfor
+endfunc
+
 func! s:ctrl_s(cnt, here) abort
   let pwd = getcwd()
-  let g:term_shell_by_pwd = get(g:, 'term_shell_by_pwd', {})
-  
+  " Ensure g:term_shell_by_pwd is a proper Vim dictionary (not Lua table)
+  if !exists('g:term_shell_by_pwd') || type(g:term_shell_by_pwd) != type({})
+    let g:term_shell_by_pwd = {}
+  endif
+
   " If we're already in a terminal buffer, just go back to the previous window
-  " instead of spawning a new terminal for a different cwd
   if &buftype ==# 'terminal'
     let tab = tabpagenr()
     let term_prevwid = win_getid()
     let curbuf = bufnr('%')
-    
-    " Try to find the terminal info for this buffer to get prevwid
+
+    " Try to find the terminal info for this buffer
     let term_info = {}
-    for [p, info] in items(g:term_shell_by_pwd)
-      if info.bufnr == curbuf
+    let pwd_list = get(g:, 'term_shell_by_pwd', {})
+    for [p, info] in items(pwd_list)
+      if type(info) == type({}) && get(info, 'bufnr', 0) == curbuf
         let term_info = info
         break
       endif
     endfor
-    
-    if !empty(term_info) && win_gotoid(term_info.prevwid)
-      " Successfully went back to previous window
+
+    if !empty(term_info)
+      " Try to go back to the previous tab first
+      let target_tab = get(term_info, 'prevtab', 0)
+      let target_buf = get(term_info, 'prevbuf', 0)
+
+      if target_tab > 0 && target_tab <= tabpagenr('$')
+        " Find where to go on the target tab BEFORE switching
+        let target_winnr = 0
+        if target_buf > 0 && bufexists(target_buf)
+          " Check if buffer is in a window on the target tab
+          let winid = bufwinid(target_buf)
+          if winid > 0
+            let wininfo = win_id2tabwin(winid)
+            " win_id2tabwin returns [tabnr, winnr] list
+            if len(wininfo) >= 2 && wininfo[0] == target_tab
+              let target_winnr = wininfo[1]
+            endif
+          endif
+        endif
+
+        " If buffer not found in a window, try the stored window ID
+        if target_winnr == 0
+          let prevwid = get(term_info, 'prevwid', 0)
+          if prevwid > 0
+            let prev_tabwin = win_id2tabwin(prevwid)
+            if len(prev_tabwin) >= 2 && prev_tabwin[0] == target_tab && prev_tabwin[1] > 0
+              let target_winnr = prev_tabwin[1]
+            endif
+          endif
+        endif
+
+        " Switch to the original tab
+        exe 'tabnext ' . target_tab
+
+        " Go to the target window if we found one
+        if target_winnr > 0
+          exe target_winnr . 'wincmd w'
+        elseif target_buf > 0 && bufexists(target_buf)
+          " Buffer exists but not in a window, show it in current window
+          exe 'buffer ' . target_buf
+        else
+          " Last resort: wincmd p
+          wincmd p
+        endif
+      else
+        " Previous tab doesn't exist, fallback to window ID
+        if get(term_info, 'prevwid', 0) > 0 && win_gotoid(term_info.prevwid)
+          " Successfully switched to window
+        else
+          wincmd p
+        endif
+      endif
     else
       " Fallback: try wincmd p
       wincmd p
     endif
-    
-    if tabpagewinnr(tab, '$') == 1 && tabpagenr() != tab
-      " Close the terminal tabpage if it's the only window in the tabpage.
-      exe 'tabclose' tab
-    endif
-    
+
     return
   endif
-  
+
   " Get or create terminal info for current pwd
   if !has_key(g:term_shell_by_pwd, pwd)
-    let g:term_shell_by_pwd[pwd] = { 'bufnr': -1, 'prevwid': win_getid() }
+    let g:term_shell_by_pwd[pwd] = { 'bufnr': -1, 'prevwid': win_getid(), 'prevtab': tabpagenr(), 'prevbuf': bufnr('%') }
   endif
-  
+
   let term_info = g:term_shell_by_pwd[pwd]
   let b = term_info.bufnr
   let bufname = ':shell:' . pwd
@@ -56,9 +147,13 @@ func! s:ctrl_s(cnt, here) abort
   endif
 
   if bufexists(b) && a:here  " Edit the :shell buffer in this window.
+    " First close any other visible terminals
+    call s:close_other_terminals(b)
     exe 'buffer' b
     setlocal nobuflisted
     let term_info.prevwid = win_getid()
+    let term_info.prevtab = tabpagenr()
+    let term_info.prevbuf = bufnr('#')
     return
   endif
 
@@ -68,13 +163,59 @@ func! s:ctrl_s(cnt, here) abort
   if bufnr('%') == b
     let tab = tabpagenr()
     let term_prevwid = win_getid()
-    if !win_gotoid(term_info.prevwid)
-      wincmd p
+
+    " Try to go back to the previous tab first
+    let target_tab = get(term_info, 'prevtab', 0)
+    let target_buf = get(term_info, 'prevbuf', 0)
+
+    if target_tab > 0 && target_tab <= tabpagenr('$')
+      " Find where to go on the target tab BEFORE switching
+      let target_winnr = 0
+      if target_buf > 0 && bufexists(target_buf)
+        " Check if buffer is in a window on the target tab
+        let winid = bufwinid(target_buf)
+        if winid > 0
+          let wininfo = win_id2tabwin(winid)
+          " win_id2tabwin returns [tabnr, winnr] list
+          if len(wininfo) >= 2 && wininfo[0] == target_tab
+            let target_winnr = wininfo[1]
+          endif
+        endif
+      endif
+
+      " If buffer not found in a window, try the stored window ID
+      if target_winnr == 0
+        let prevwid = get(term_info, 'prevwid', 0)
+        if prevwid > 0
+          let prev_tabwin = win_id2tabwin(prevwid)
+          if len(prev_tabwin) >= 2 && prev_tabwin[0] == target_tab && prev_tabwin[1] > 0
+            let target_winnr = prev_tabwin[1]
+          endif
+        endif
+      endif
+
+      " Switch to the original tab
+      exe 'tabnext ' . target_tab
+
+      " Go to the target window if we found one
+      if target_winnr > 0
+        exe target_winnr . 'wincmd w'
+      elseif target_buf > 0 && bufexists(target_buf)
+        " Buffer exists but not in a window, show it in current window
+        exe 'buffer ' . target_buf
+      else
+        " Last resort: wincmd p
+        wincmd p
+      endif
+    else
+      " Previous tab doesn't exist, fallback to window ID
+      if get(term_info, 'prevwid', 0) > 0 && win_gotoid(term_info.prevwid)
+        " Successfully switched to window
+      else
+        wincmd p
+      endif
     endif
-    if tabpagewinnr(tab, '$') == 1 && tabpagenr() != tab
-    " Close the :shell tabpage if it's the only window in the tabpage.
-      exe 'tabclose' tab
-    endif
+
     if bufnr('%') == b
       " Edge-case: :shell buffer showing in multiple windows in curtab.
       " Find a non-:shell window in curtab.
@@ -99,9 +240,19 @@ func! s:ctrl_s(cnt, here) abort
   endif
 
   "
-  " Go to existing :shell or create a new one.
+  " Capture current context before potentially switching to terminal
   "
+  let curbuf = bufnr('%')
+  let curtab = tabpagenr()
   let curwinid = win_getid()
+
+  "
+  " Go to existing :shell or create a new one.
+  ""
+
+  " First, close any other visible terminals before showing this one
+  call s:close_other_terminals(b)
+
   if a:cnt == 0 && bufexists(b) && winbufnr(term_info.prevwid) == b
     " Go to :shell displayed in the previous window.
     call win_gotoid(term_info.prevwid)
@@ -116,8 +267,13 @@ func! s:ctrl_s(cnt, here) abort
       " Not in current tabpage.
       let ws = win_findbuf(b)
       if a:cnt == 0 && !empty(ws)
-        " Found in another tabpage.
-        call win_gotoid(ws[0])
+        " Found in another tabpage - switch to that tab and window.
+        let target_winid = ws[0]
+        let target_tab = win_id2tabwin(target_winid)[0]
+        if target_tab > 0
+          exe 'tabnext ' . target_tab
+        endif
+        call win_gotoid(target_winid)
       else
         " Not in any existing window; open a split (horizontal by default).
         exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
@@ -136,26 +292,42 @@ func! s:ctrl_s(cnt, here) abort
   else
     " Create new :shell for this pwd.
 
-    let origbuf = bufnr('%')
-    if !a:here
-      exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
+    " Check if a buffer with this name already exists (from previous session)
+    let existing_buf = bufnr(fnameescape(bufname))
+    if existing_buf > 0 && bufexists(existing_buf)
+      " Reuse the existing buffer instead of creating a new one
+      let term_info.bufnr = existing_buf
+      let origbuf = bufnr('%')
+      if !a:here
+        exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
+      endif
+      exe 'buffer ' . existing_buf
+      " Ensure keymap is set up
+      tnoremap <buffer> <C-s> <C-\><C-n>:call <SID>ctrl_s(0, v:false)<CR>
+    else
+      let origbuf = bufnr('%')
+      if !a:here
+        exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
+      endif
+      terminal
+      setlocal scrollback=-1
+      " Name the buffer with pwd context
+      exe 'file ' . fnameescape(bufname)
+      " Store the buffer number for this pwd
+      let term_info.bufnr = bufnr('%')
+      " XXX: original term:// buffer hangs around after :file ...
+      bwipeout! #
+      " Set up cleanup on vim leave for this buffer
+      exe 'autocmd VimLeavePre * bwipeout! ' . fnameescape(bufname)
+      " Set alternate buffer to something intuitive.
+      let @# = origbuf
+      tnoremap <buffer> <C-s> <C-\><C-n>:call <SID>ctrl_s(0, v:false)<CR>
     endif
-    terminal
-    setlocal scrollback=-1
-    " Name the buffer with pwd context
-    exe 'file ' . fnameescape(bufname)
-    " Store the buffer number for this pwd
-    let term_info.bufnr = bufnr('%')
-    " XXX: original term:// buffer hangs around after :file ...
-    bwipeout! #
-    " Set up cleanup on vim leave for this buffer
-    exe 'autocmd VimLeavePre * bwipeout! ' . fnameescape(bufname)
-    " Set alternate buffer to something intuitive.
-    let @# = origbuf
-    tnoremap <buffer> <C-s> <C-\><C-n>:call <SID>ctrl_s(0, v:false)<CR>
   endif
 
   let term_info.prevwid = curwinid
+  let term_info.prevtab = curtab
+  let term_info.prevbuf = curbuf
   setlocal nobuflisted
 endfunc
 nnoremap <C-s> :<C-u>call <SID>ctrl_s(v:count, v:false)<CR>
@@ -171,7 +343,8 @@ func! s:list_shells() abort
   echo "Active shells by directory:"
   for [pwd, info] in items(shells)
     let exists = bufexists(info.bufnr) ? 'active' : 'stale'
-    echo '  [' . exists . '] ' . pwd
+    let visible = bufwinnr(info.bufnr) > 0 ? ' (visible)' : ''
+    echo '  [' . exists . '] ' . pwd . visible
   endfor
 endfunc
 command! Shells call s:list_shells()
