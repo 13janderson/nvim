@@ -30,7 +30,7 @@ return {
         ["<C-s>"] = {},
         ["<C-h>"] = {},
         ["<C-t>"] = {},
-        ["<C-p>"] = "actions.preview",
+        ["<C-p>"] = {},
         ["<C-c>"] = {},
         ["<C-l>"] = "actions.refresh",
         ["-"] = { "actions.parent", mode = "n" },
