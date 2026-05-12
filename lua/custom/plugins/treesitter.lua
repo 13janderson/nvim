@@ -2,9 +2,9 @@ return {
   {
     'nvim-treesitter/nvim-treesitter-context',
     config = function()
-      vim.keymap.set('n', 'gt', function()
-        require('treesitter-context').go_to_context(vim.v.count1)
-      end, { silent = true })
+      -- vim.keymap.set('n', 'gt', function()
+      --   require('treesitter-context').go_to_context(vim.v.count1)
+      -- end, { silent = true })
       require('treesitter-context').setup {
         opts = {
           enable = true,
@@ -20,30 +20,6 @@ return {
     main = 'nvim-treesitter', -- Sets main module to use for opts
     auto_install = true,
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
-    opts = {
-      -- ensure_installed = {
-      --   'bash',
-      --   'c',
-      --   'diff',
-      --   'html',
-      --   'lua',
-      --   'luadoc',
-      --   'markdown',
-      --   'markdown_inline',
-      --   'query',
-      --   'terraform',
-      --   'vim',
-      --   'vimdoc',
-      --   'go',
-      --   'typescript',
-      --   'javascript',
-      --   'c_sharp',
-      --   'powershell',
-      --   'yaml',
-      --   'python',
-      --   'prisma',
-      -- },
-    },
     init = function()
       vim.api.nvim_create_autocmd('FileType', {
         callback = function()
@@ -79,11 +55,11 @@ return {
       }
       local alreadyInstalled = require('nvim-treesitter.config').get_installed()
       local parsersToInstall = vim
-        .iter(ensureInstalled)
-        :filter(function(parser)
-          return not vim.tbl_contains(alreadyInstalled, parser)
-        end)
-        :totable()
+          .iter(ensureInstalled)
+          :filter(function(parser)
+            return not vim.tbl_contains(alreadyInstalled, parser)
+          end)
+          :totable()
       require('nvim-treesitter').install(parsersToInstall)
     end,
     -- Autoinstall languages that are not installed
