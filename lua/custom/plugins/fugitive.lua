@@ -152,8 +152,12 @@ return {
         vim.cmd 'G push --no-verify'
       end
 
+      local pull = function()
+        vim.cmd 'G pull'
+      end
+
       vim.keymap.set('n', 'Up', push, { noremap = false, silent = true })
-      vim.keymap.set('n', 'UP', push, { noremap = false, silent = true })
+      vim.keymap.set('n', 'UP', pull, { noremap = false, silent = true })
     end,
   },
 }

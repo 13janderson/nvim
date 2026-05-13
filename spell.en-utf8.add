@@ -72,3 +72,5 @@ config/!
 config
 Monzo
 Neovim
+#nymore
+anymore/!
