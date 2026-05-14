@@ -46,9 +46,22 @@ local function is_opencode_running(chan)
   return is_running
 end
 
-vim.api.nvim_create_autocmd('TermEnter', {
+-- Track the last entered terminal buffer
+local last_terminal_bufnr = nil
+
+vim.api.nvim_create_autocmd('BufEnter', {
   callback = function()
     local bufnr = vim.api.nvim_get_current_buf()
+
+    -- Only process terminal buffers
+    if vim.bo[bufnr].buftype ~= 'terminal' then
+      return
+    end
+    print 'entered terminal buffer'
+
+    -- Track this as the most recently used terminal
+    last_terminal_bufnr = bufnr
+
     local chan = get_terminal_channel(bufnr)
 
     if not chan then
@@ -58,7 +71,7 @@ vim.api.nvim_create_autocmd('TermEnter', {
 
     vim.defer_fn(function()
       if is_opencode_running(chan) then
-        -- print 'Setting OpenCode keymaps'
+        print 'Setting OpenCode keymaps'
 
         -- Terminal buffer keymaps for easier navigation
         vim.api.nvim_buf_set_keymap(bufnr, 't', '<Esc>', '<C-\\><C-n>',
@@ -79,7 +92,7 @@ vim.api.nvim_create_autocmd('TermEnter', {
         vim.api.nvim_buf_set_keymap(bufnr, 'n', 'G', 'i<End><C-\\><C-n>',
           { noremap = true, silent = true, desc = 'Jump to last message' })
       else
-        -- print 'Unsetting OpenCode keymaps'
+        print 'Unsetting OpenCode keymaps'
         local delete_buffer_keymap = function(m, lhs)
           local keymaps = vim.api.nvim_buf_get_keymap(bufnr, m)
           for _, km in ipairs(keymaps) do
@@ -103,10 +116,18 @@ vim.api.nvim_create_autocmd('TermEnter', {
 
 -- Find the most recently active terminal buffer running OpenCode
 local function find_opencode_terminal()
-  local bufs = vim.api.nvim_list_bufs()
-  -- Iterate in reverse to find most recently used
-  for i = #bufs, 1, -1 do
-    local bufnr = bufs[i]
+  -- First try the last terminal we entered
+  if last_terminal_bufnr and vim.api.nvim_buf_is_valid(last_terminal_bufnr) then
+    if vim.bo[last_terminal_bufnr].buftype == 'terminal' then
+      local chan = get_terminal_channel(last_terminal_bufnr)
+      if chan and is_opencode_running(chan) then
+        return chan, last_terminal_bufnr
+      end
+    end
+  end
+
+  -- Fallback: search all buffers for any running OpenCode terminal
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buftype == 'terminal' then
       local chan = get_terminal_channel(bufnr)
       if chan and is_opencode_running(chan) then
@@ -114,39 +135,40 @@ local function find_opencode_terminal()
       end
     end
   end
+
   return nil, nil
 end
 
 -- Send text to OpenCode terminal
-vim.keymap.set("v", "<leader>oc", function()
+vim.keymap.set('v', '<leader>oc', function()
   -- Get selected lines
-  local start_line = vim.fn.line("'<")
-  local end_line = vim.fn.line("'>")
+  local start_line = vim.fn.line "'<"
+  local end_line = vim.fn.line "'>"
   local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
 
   if #lines == 0 then
-    print("No lines selected")
+    print 'No lines selected'
     return
   end
 
   -- Get filename
-  local filename = vim.fn.expand('%:p')
+  local filename = vim.fn.expand '%:p'
   if filename == '' then
     filename = '[unnamed]'
   end
 
   -- Build the message with context header
-  local context = string.format("File: %s (lines %d-%d)\n", filename, start_line, end_line)
-  local text = context .. table.concat(lines, "\n") .. "\n"
+  local context = string.format('File: %s (lines %d-%d)\n', filename, start_line, end_line)
+  local text = context .. table.concat(lines, '\n') .. '\n'
 
   -- Find OpenCode terminal
-  local chan, bufnr = find_opencode_terminal()
+  local chan, _ = find_opencode_terminal()
   if not chan then
-    print("No OpenCode terminal found")
+    print 'No OpenCode terminal found'
     return
   end
 
   -- Send to terminal
   vim.fn.chansend(chan, text)
-  print("Sent " .. #lines .. " lines from " .. filename .. " (" .. start_line .. "-" .. end_line .. ") to OpenCode")
-end, { desc = "Send selected lines to OpenCode" })
+  print('Sent ' .. #lines .. ' lines from ' .. filename .. ' (' .. start_line .. '-' .. end_line .. ') to OpenCode')
+end, { desc = 'Send selected lines to OpenCode' })
