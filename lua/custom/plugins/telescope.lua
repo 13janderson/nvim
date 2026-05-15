@@ -52,6 +52,12 @@ return {
               ["C-c>"] = "close",
               ["<C-j>"] = "move_selection_next",
               ["<C-k>"] = "move_selection_previous",
+              ["<C-y>"] = function(prompt_bufnr)
+                local value = require("telescope.actions.state").get_selected_entry().value
+                require("telescope.actions").close(prompt_bufnr)
+                vim.fn.setreg("+", value)
+                vim.notify(value, nil, { title = "Copied", icon = "󰅍" })
+              end
             },
           },
           file_ignore_patterns = {
