@@ -57,7 +57,6 @@ vim.api.nvim_create_autocmd('BufEnter', {
     if vim.bo[bufnr].buftype ~= 'terminal' then
       return
     end
-    print 'entered terminal buffer'
 
     -- Track this as the most recently used terminal
     last_terminal_bufnr = bufnr
@@ -71,8 +70,6 @@ vim.api.nvim_create_autocmd('BufEnter', {
 
     vim.defer_fn(function()
       if is_opencode_running(chan) then
-        print 'Setting OpenCode keymaps'
-
         -- Terminal buffer keymaps for easier navigation
         vim.api.nvim_buf_set_keymap(bufnr, 't', '<Esc>', '<C-\\><C-n>',
           { noremap = true, silent = true, desc = 'Exit terminal mode' })
@@ -92,7 +89,6 @@ vim.api.nvim_create_autocmd('BufEnter', {
         vim.api.nvim_buf_set_keymap(bufnr, 'n', 'G', 'i<End><C-\\><C-n>',
           { noremap = true, silent = true, desc = 'Jump to last message' })
       else
-        print 'Unsetting OpenCode keymaps'
         local delete_buffer_keymap = function(m, lhs)
           local keymaps = vim.api.nvim_buf_get_keymap(bufnr, m)
           for _, km in ipairs(keymaps) do
@@ -140,7 +136,7 @@ local function find_opencode_terminal()
 end
 
 -- Send text to OpenCode terminal
-vim.keymap.set('v', '<leader>oc', function()
+vim.keymap.set('v', 'O', function()
   -- Get selected lines
   local start_line = vim.fn.line "'<"
   local end_line = vim.fn.line "'>"
