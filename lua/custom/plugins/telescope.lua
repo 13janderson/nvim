@@ -42,6 +42,14 @@ return {
 
       -- [[ Configure Telescope ]]
       -- See `:help telescope` and `:help telescope.setup()`
+      local function select_vertical_right(prompt_bufnr)
+        local actions = require 'telescope.actions'
+        local original_splitright = vim.o.splitright
+        vim.o.splitright = true
+        actions.select_vertical(prompt_bufnr)
+        vim.o.splitright = original_splitright
+      end
+
       require('telescope').setup {
         -- You can put your default mappings / updates / etc. in here
         --  All the info you're looking for is in `:help telescope.setup()`
@@ -52,12 +60,16 @@ return {
               ["C-c>"] = "close",
               ["<C-j>"] = "move_selection_next",
               ["<C-k>"] = "move_selection_previous",
+              ["<C-v>"] = select_vertical_right,
               ["<C-y>"] = function(prompt_bufnr)
                 local value = require("telescope.actions.state").get_selected_entry().value
                 require("telescope.actions").close(prompt_bufnr)
                 vim.fn.setreg("+", value)
                 vim.notify(value, nil, { title = "Copied", icon = "󰅍" })
-              end
+              end,
+            },
+            n = {
+              ["<C-v>"] = select_vertical_right,
             },
           },
           file_ignore_patterns = {

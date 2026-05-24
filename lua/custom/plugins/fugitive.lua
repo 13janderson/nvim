@@ -28,10 +28,6 @@ return {
           end,
           once = true,
         })
-
-        -- DoOnBufferClose(function()
-        --   vim.cmd("G push")
-        -- end, 5000)
       end)
 
       -- Diff viewing keymaps
@@ -40,7 +36,6 @@ return {
 
       -- Whenever we are going between files with [q and and ]q we want to detect buffer changes
       -- but we only want to do this when difftool has populated the qf list
-      -- TODO fix this shit
       local difftool_var = 'difftool'
 
       local diffsplit_cmd = 'Gvdiffsplit!'
