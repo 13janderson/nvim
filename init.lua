@@ -216,7 +216,7 @@ vim.keymap.set('n', "<leader>x", ToggleScratch)
 vim.keymap.set({ 'n', 'v' }, '<leader>y', [["+y]])
 vim.keymap.set('n', '<leader>Y', 'ggVG"+y<C-O>')
 -- vim.keymap.set("n", "<leader>Y", [["+Y]])
-vim.keymap.set('n', '<leader>e', ':Oil<CR>')
+vim.keymap.set('n', '-', ':Oil<CR>')
 vim.keymap.set('n', '<C-d>', '<C-d>zz')
 vim.keymap.set('n', '<C-u>', '<C-u>zz')
 
