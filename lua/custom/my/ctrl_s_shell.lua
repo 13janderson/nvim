@@ -1,11 +1,14 @@
 vim.cmd [[
-" :shell
+" :shell / :opencode
 "
-" Creates a per-pwd toggleable terminal with maximum 'scrollback'.
-" Only ONE terminal buffer is visible at a time globally - opening a terminal
-" for a pwd closes/hides any other visible terminal windows.
+" Creates per-pwd toggleable terminals with maximum 'scrollback'.
+" For each terminal type, only ONE buffer of that type is visible at a time -
+" opening a terminal for a pwd closes/hides any other visible terminal windows
+" of the same type.
 "
-" Storage for per-pwd terminals: g:term_shell_by_pwd[pwd] = { bufnr, prevwid, prevtab, prevbuf }
+" Storage for per-pwd terminals:
+"   g:term_shell_by_pwd[pwd]    = { bufnr, prevwid, prevtab, prevbuf }
+"   g:term_opencode_by_pwd[pwd] = { bufnr, prevwid, prevtab, prevbuf }
 
 " Close all other visible terminal windows except the current one
 func! s:close_other_terminals(current_buf) abort
@@ -348,4 +351,272 @@ func! s:list_shells() abort
   endfor
 endfunc
 command! Shells call s:list_shells()
+
+" Same per-pwd toggleable terminal logic for an opencode window on <C-x>.
+func! s:close_other_opencode_terminals(current_buf) abort
+  if !exists('g:term_opencode_by_pwd') || type(g:term_opencode_by_pwd) != type({})
+    let g:term_opencode_by_pwd = {}
+  endif
+
+  let tracked_bufs = []
+  for info in values(g:term_opencode_by_pwd)
+    if info.bufnr > 0 && bufexists(info.bufnr)
+      call add(tracked_bufs, info.bufnr)
+    endif
+  endfor
+
+  for buf in tracked_bufs
+    if buf == a:current_buf
+      continue
+    endif
+
+    let wins = win_findbuf(buf)
+    for winid in wins
+      let prev_win = win_getid()
+      if win_gotoid(winid)
+        if winnr('$') == 1 && tabpagenr('$') > 1
+          close
+        else
+          hide
+        endif
+        call win_gotoid(prev_win)
+      endif
+    endfor
+  endfor
+endfunc
+
+func! s:ctrl_x(cnt, here) abort
+  let pwd = getcwd()
+  if !exists('g:term_opencode_by_pwd') || type(g:term_opencode_by_pwd) != type({})
+    let g:term_opencode_by_pwd = {}
+  endif
+
+  if &buftype ==# 'terminal'
+    let tab = tabpagenr()
+    let term_prevwid = win_getid()
+    let curbuf = bufnr('%')
+
+    let term_info = {}
+    let pwd_list = get(g:, 'term_opencode_by_pwd', {})
+    for [p, info] in items(pwd_list)
+      if type(info) == type({}) && get(info, 'bufnr', 0) == curbuf
+        let term_info = info
+        break
+      endif
+    endfor
+
+    if !empty(term_info)
+      let target_tab = get(term_info, 'prevtab', 0)
+      let target_buf = get(term_info, 'prevbuf', 0)
+
+      if target_tab > 0 && target_tab <= tabpagenr('$')
+        let target_winnr = 0
+        if target_buf > 0 && bufexists(target_buf)
+          let winid = bufwinid(target_buf)
+          if winid > 0
+            let wininfo = win_id2tabwin(winid)
+            if len(wininfo) >= 2 && wininfo[0] == target_tab
+              let target_winnr = wininfo[1]
+            endif
+          endif
+        endif
+
+        if target_winnr == 0
+          let prevwid = get(term_info, 'prevwid', 0)
+          if prevwid > 0
+            let prev_tabwin = win_id2tabwin(prevwid)
+            if len(prev_tabwin) >= 2 && prev_tabwin[0] == target_tab && prev_tabwin[1] > 0
+              let target_winnr = prev_tabwin[1]
+            endif
+          endif
+        endif
+
+        exe 'tabnext ' . target_tab
+
+        if target_winnr > 0
+          exe target_winnr . 'wincmd w'
+        elseif target_buf > 0 && bufexists(target_buf)
+          exe 'buffer ' . target_buf
+        else
+          wincmd p
+        endif
+      else
+        if get(term_info, 'prevwid', 0) > 0 && win_gotoid(term_info.prevwid)
+        else
+          wincmd p
+        endif
+      endif
+    else
+      wincmd p
+    endif
+
+    return
+  endif
+
+  if !has_key(g:term_opencode_by_pwd, pwd)
+    let g:term_opencode_by_pwd[pwd] = { 'bufnr': -1, 'prevwid': win_getid(), 'prevtab': tabpagenr(), 'prevbuf': bufnr('%') }
+  endif
+
+  let term_info = g:term_opencode_by_pwd[pwd]
+  let b = term_info.bufnr
+  let bufname = ':opencode:' . pwd
+
+  if b > 0 && !bufexists(b)
+    let b = -1
+    let term_info.bufnr = -1
+  endif
+
+  if bufexists(b) && a:here
+    call s:close_other_opencode_terminals(b)
+    exe 'buffer' b
+    setlocal nobuflisted
+    let term_info.prevwid = win_getid()
+    let term_info.prevtab = tabpagenr()
+    let term_info.prevbuf = bufnr('#')
+    return
+  endif
+
+  if bufnr('%') == b
+    let tab = tabpagenr()
+    let term_prevwid = win_getid()
+
+    let target_tab = get(term_info, 'prevtab', 0)
+    let target_buf = get(term_info, 'prevbuf', 0)
+
+    if target_tab > 0 && target_tab <= tabpagenr('$')
+      let target_winnr = 0
+      if target_buf > 0 && bufexists(target_buf)
+        let winid = bufwinid(target_buf)
+        if winid > 0
+          let wininfo = win_id2tabwin(winid)
+          if len(wininfo) >= 2 && wininfo[0] == target_tab
+            let target_winnr = wininfo[1]
+          endif
+        endif
+      endif
+
+      if target_winnr == 0
+        let prevwid = get(term_info, 'prevwid', 0)
+        if prevwid > 0
+          let prev_tabwin = win_id2tabwin(prevwid)
+          if len(prev_tabwin) >= 2 && prev_tabwin[0] == target_tab && prev_tabwin[1] > 0
+            let target_winnr = prev_tabwin[1]
+          endif
+        endif
+      endif
+
+      exe 'tabnext ' . target_tab
+
+      if target_winnr > 0
+        exe target_winnr . 'wincmd w'
+      elseif target_buf > 0 && bufexists(target_buf)
+        exe 'buffer ' . target_buf
+      else
+        wincmd p
+      endif
+    else
+      if get(term_info, 'prevwid', 0) > 0 && win_gotoid(term_info.prevwid)
+      else
+        wincmd p
+      endif
+    endif
+
+    if bufnr('%') == b
+      let bufs = filter(tabpagebuflist(), 'v:val != '.b)
+      if len(bufs) > 0
+        exe bufwinnr(bufs[0]).'wincmd w'
+      else
+        if &buftype !=# 'terminal' && getline(1) == '' && line('$') == 1
+          bwipeout! %
+          call s:ctrl_x(a:cnt, a:here)
+        end
+        return
+      endif
+    endif
+    let term_info.prevwid = term_prevwid
+
+    return
+  endif
+
+  let curbuf = bufnr('%')
+  let curtab = tabpagenr()
+  let curwinid = win_getid()
+
+  call s:close_other_opencode_terminals(b)
+
+  if a:cnt == 0 && bufexists(b) && winbufnr(term_info.prevwid) == b
+    call win_gotoid(term_info.prevwid)
+  elseif bufexists(b)
+    let w = bufwinid(b)
+    if a:cnt == 0 && w > 0
+      call win_gotoid(w)
+    else
+      let ws = win_findbuf(b)
+      if a:cnt == 0 && !empty(ws)
+        let target_winid = ws[0]
+        let target_tab = win_id2tabwin(target_winid)[0]
+        if target_tab > 0
+          exe 'tabnext ' . target_tab
+        endif
+        call win_gotoid(target_winid)
+      else
+        exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
+        exe 'buffer' b
+      endif
+    endif
+
+    if &buftype !=# 'terminal' && getline(1) == '' && line('$') == 1
+      call win_gotoid(term_info.prevwid)
+      exe 'bwipeout!' b
+      let term_info.bufnr = -1
+      call s:ctrl_x(a:cnt, a:here)
+    end
+  else
+    let existing_buf = bufnr(fnameescape(bufname))
+    if existing_buf > 0 && bufexists(existing_buf)
+      let term_info.bufnr = existing_buf
+      let origbuf = bufnr('%')
+      if !a:here
+        exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
+      endif
+      exe 'buffer ' . existing_buf
+      tnoremap <buffer> <C-x> <C-\><C-n>:call <SID>ctrl_x(0, v:false)<CR>
+    else
+      let origbuf = bufnr('%')
+      if !a:here
+        exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
+      endif
+      terminal opencode
+      setlocal scrollback=-1
+      exe 'file ' . fnameescape(bufname)
+      let term_info.bufnr = bufnr('%')
+      bwipeout! #
+      exe 'autocmd VimLeavePre * bwipeout! ' . fnameescape(bufname)
+      let @# = origbuf
+      tnoremap <buffer> <C-x> <C-\><C-n>:call <SID>ctrl_x(0, v:false)<CR>
+    endif
+  endif
+
+  let term_info.prevwid = curwinid
+  let term_info.prevtab = curtab
+  let term_info.prevbuf = curbuf
+  setlocal nobuflisted
+endfunc
+nnoremap <C-x> :<C-u>call <SID>ctrl_x(v:count, v:false)<CR>
+nnoremap '<C-x> :<C-u>call <SID>ctrl_x(v:count, v:true)<CR>
+
+func! s:list_opencodes() abort
+  let opencodes = get(g:, 'term_opencode_by_pwd', {})
+  if empty(opencodes)
+    echo "No active opencode terminals"
+    return
+  endif
+  echo "Active opencode terminals by directory:"
+  for [pwd, info] in items(opencodes)
+    let exists = bufexists(info.bufnr) ? 'active' : 'stale'
+    let visible = bufwinnr(info.bufnr) > 0 ? ' (visible)' : ''
+    echo '  [' . exists . '] ' . pwd . visible
+  endfor
+endfunc
+command! Opencodes call s:list_opencodes()
 ]]
