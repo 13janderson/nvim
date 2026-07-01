@@ -6,6 +6,9 @@ vim.cmd [[
 " opening a terminal for a pwd closes/hides any other visible terminal windows
 " of the same type.
 "
+" Terminal buffers are tracked in memory by their buffer number; no special
+" buffer names are used for lookup.
+"
 " Storage for per-pwd terminals:
 "   g:term_shell_by_pwd[pwd]    = { bufnr, prevwid, prevtab, prevbuf }
 "   g:term_opencode_by_pwd[pwd] = { bufnr, prevwid, prevtab, prevbuf }
@@ -49,6 +52,38 @@ func! s:close_other_terminals(current_buf) abort
       endif
     endfor
   endfor
+endfunc
+
+func! s:opencode_terminal_visible() abort
+  let opencodes = get(g:, 'term_opencode_by_pwd', {})
+  for info in values(opencodes)
+    let b = get(info, 'bufnr', 0)
+    if b > 0 && bufexists(b) && !empty(win_findbuf(b))
+      return 1
+    endif
+  endfor
+  return 0
+endfunc
+
+func! s:shell_terminal_visible() abort
+  let shells = get(g:, 'term_shell_by_pwd', {})
+  for info in values(shells)
+    let b = get(info, 'bufnr', 0)
+    if b > 0 && bufexists(b) && !empty(win_findbuf(b))
+      return 1
+    endif
+  endfor
+  return 0
+endfunc
+
+func! s:split_cmd(cnt, other_visible) abort
+  if a:cnt == 0 && a:other_visible
+    return 'vsplit'
+  elseif a:cnt == 0
+    return 'split'
+  else
+    return a:cnt.'split'
+  endif
 endfunc
 
 func! s:ctrl_s(cnt, here) abort
@@ -141,7 +176,6 @@ func! s:ctrl_s(cnt, here) abort
 
   let term_info = g:term_shell_by_pwd[pwd]
   let b = term_info.bufnr
-  let bufname = ':shell:' . pwd
 
   " Validate buffer still exists (might have been deleted)
   if b > 0 && !bufexists(b)
@@ -278,8 +312,8 @@ func! s:ctrl_s(cnt, here) abort
         endif
         call win_gotoid(target_winid)
       else
-        " Not in any existing window; open a split (horizontal by default).
-        exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
+        " Not in any existing window; open a split.
+        exe s:split_cmd(a:cnt, s:opencode_terminal_visible())
         exe 'buffer' b
       endif
     endif
@@ -294,38 +328,15 @@ func! s:ctrl_s(cnt, here) abort
     end
   else
     " Create new :shell for this pwd.
-
-    " Check if a buffer with this name already exists (from previous session)
-    let existing_buf = bufnr(fnameescape(bufname))
-    if existing_buf > 0 && bufexists(existing_buf)
-      " Reuse the existing buffer instead of creating a new one
-      let term_info.bufnr = existing_buf
-      let origbuf = bufnr('%')
-      if !a:here
-        exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
-      endif
-      exe 'buffer ' . existing_buf
-      " Ensure keymap is set up
-      tnoremap <buffer> <C-s> <C-\><C-n>:call <SID>ctrl_s(0, v:false)<CR>
-    else
-      let origbuf = bufnr('%')
-      if !a:here
-        exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
-      endif
-      terminal
-      setlocal scrollback=-1
-      " Name the buffer with pwd context
-      exe 'file ' . fnameescape(bufname)
-      " Store the buffer number for this pwd
-      let term_info.bufnr = bufnr('%')
-      " XXX: original term:// buffer hangs around after :file ...
-      bwipeout! #
-      " Set up cleanup on vim leave for this buffer
-      exe 'autocmd VimLeavePre * bwipeout! ' . fnameescape(bufname)
-      " Set alternate buffer to something intuitive.
-      let @# = origbuf
-      tnoremap <buffer> <C-s> <C-\><C-n>:call <SID>ctrl_s(0, v:false)<CR>
+    let origbuf = bufnr('%')
+    if !a:here
+      exe s:split_cmd(a:cnt, s:opencode_terminal_visible())
     endif
+    terminal
+    setlocal scrollback=-1
+    let term_info.bufnr = bufnr('%')
+    let @# = origbuf
+    tnoremap <buffer> <C-s> <C-\><C-n>:call <SID>ctrl_s(0, v:false)<CR>
   endif
 
   let term_info.prevwid = curwinid
@@ -459,7 +470,6 @@ func! s:ctrl_x(cnt, here) abort
 
   let term_info = g:term_opencode_by_pwd[pwd]
   let b = term_info.bufnr
-  let bufname = ':opencode:' . pwd
 
   if b > 0 && !bufexists(b)
     let b = -1
@@ -560,7 +570,7 @@ func! s:ctrl_x(cnt, here) abort
         endif
         call win_gotoid(target_winid)
       else
-        exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
+        exe s:split_cmd(a:cnt, s:shell_terminal_visible())
         exe 'buffer' b
       endif
     endif
@@ -572,29 +582,15 @@ func! s:ctrl_x(cnt, here) abort
       call s:ctrl_x(a:cnt, a:here)
     end
   else
-    let existing_buf = bufnr(fnameescape(bufname))
-    if existing_buf > 0 && bufexists(existing_buf)
-      let term_info.bufnr = existing_buf
-      let origbuf = bufnr('%')
-      if !a:here
-        exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
-      endif
-      exe 'buffer ' . existing_buf
-      tnoremap <buffer> <C-x> <C-\><C-n>:call <SID>ctrl_x(0, v:false)<CR>
-    else
-      let origbuf = bufnr('%')
-      if !a:here
-        exe ((a:cnt == 0) ? 'split' : a:cnt.'split')
-      endif
-      terminal opencode
-      setlocal scrollback=-1
-      exe 'file ' . fnameescape(bufname)
-      let term_info.bufnr = bufnr('%')
-      bwipeout! #
-      exe 'autocmd VimLeavePre * bwipeout! ' . fnameescape(bufname)
-      let @# = origbuf
-      tnoremap <buffer> <C-x> <C-\><C-n>:call <SID>ctrl_x(0, v:false)<CR>
+    " Create new :opencode terminal for this pwd.
+    let origbuf = bufnr('%')
+    if !a:here
+      exe s:split_cmd(a:cnt, s:shell_terminal_visible())
     endif
+    terminal $SHELL -c 'opencode -c || opencode'
+    setlocal scrollback=-1
+    let term_info.bufnr = bufnr('%')
+    let @# = origbuf
   endif
 
   let term_info.prevwid = curwinid
