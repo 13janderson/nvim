@@ -111,7 +111,7 @@ local function goto_previous_context(term_info)
   end
 end
 
-local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible)
+local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, is_opencode)
   local pwd = vim.fn.getcwd()
 
   -- Already in a terminal buffer: return to the previous context.
@@ -246,8 +246,28 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
     if terminal_close_key then
       vim.keymap.set('t', terminal_close_key, function()
         vim.cmd('stopinsert')
-        ctrl_toggle(0, false, dict, cmd, terminal_close_key, other_visible)
+        ctrl_toggle(0, false, dict, cmd, terminal_close_key, other_visible, is_opencode)
       end, { buffer = new_buf })
+    end
+
+    if is_opencode then
+      -- Scoping the buffer entirely to opencode: set keymaps once at creation.
+      -- Exit terminal mode
+      vim.api.nvim_buf_set_keymap(new_buf, 't', '<Esc>', '<C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Exit terminal mode' })
+      -- Opencode scrolling in normal mode (send to opencode TUI)
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-k>', 'i<PageUp><C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Scroll up' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-j>', 'i<PageDown><C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Scroll down' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-u>', 'i<C-PageUp><C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Half page up' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-d>', 'i<C-PageDown><C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Half page down' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', 'gg', 'i<Home><C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Jump to first message' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', 'G', 'i<End><C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Jump to last message' })
     end
   end
 
@@ -258,11 +278,11 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
 end
 
 function M.ctrl_s(cnt, here)
-  ctrl_toggle(cnt, here, term_shell_by_pwd, '', '<C-s>', terminal_visible_in_current_tab(term_opencode_by_pwd))
+  ctrl_toggle(cnt, here, term_shell_by_pwd, '', '<C-s>', terminal_visible_in_current_tab(term_opencode_by_pwd), false)
 end
 
 function M.ctrl_x(cnt, here)
-  ctrl_toggle(cnt, here, term_opencode_by_pwd, "$SHELL -c 'opencode -c || opencode'", nil, terminal_visible_in_current_tab(term_shell_by_pwd))
+  ctrl_toggle(cnt, here, term_opencode_by_pwd, "$SHELL -c 'opencode -c || opencode'", nil, terminal_visible_in_current_tab(term_shell_by_pwd), true)
 end
 
 local function list_terminals(dict, label)
@@ -295,6 +315,46 @@ end, { remap = false })
 vim.keymap.set('n', "'<C-x>", function()
   M.ctrl_x(vim.v.count, true)
 end, { remap = false })
+
+-- Send selected lines to the opencode terminal for the current worktree.
+-- ctrl+x shell tracks the opencode terminal per-pwd, so we know which buffer is
+-- the relevant one for the current worktree.
+vim.keymap.set('v', 'O', function()
+  local start_line = vim.fn.line "'<"
+  local end_line = vim.fn.line "'>"
+  local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+
+  if #lines == 0 then
+    print 'No lines selected'
+    return
+  end
+
+  local filename = vim.fn.expand '%:p'
+  if filename == '' then
+    filename = '[unnamed]'
+  end
+
+  local context = string.format('File: %s (lines %d-%d)\n', filename, start_line, end_line)
+  local text = context .. table.concat(lines, '\n') .. '\n'
+
+  local pwd = vim.fn.getcwd()
+  local info = term_opencode_by_pwd[pwd]
+  local chan = nil
+  if info and buf_valid(info.bufnr) then
+    chan = vim.bo[info.bufnr].channel
+    if not chan or chan <= 0 then
+      chan = nil
+    end
+  end
+
+  if not chan then
+    print 'No OpenCode terminal found for this worktree'
+    return
+  end
+
+  vim.fn.chansend(chan, text)
+  print(('Sent %d lines from %s (%d-%d) to OpenCode'):format(#lines, filename, start_line, end_line))
+end, { desc = 'Send selected lines to OpenCode' })
 
 -- Commands
 vim.api.nvim_create_user_command('Shells', function()
