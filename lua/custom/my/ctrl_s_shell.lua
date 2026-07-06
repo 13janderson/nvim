@@ -1,618 +1,383 @@
-vim.cmd [[
-" :shell / :opencode
-"
-" Creates per-pwd toggleable terminals with maximum 'scrollback'.
-" For each terminal type, only ONE buffer of that type is visible at a time -
-" opening a terminal for a pwd closes/hides any other visible terminal windows
-" of the same type.
-"
-" Terminal buffers are tracked in memory by their buffer number; no special
-" buffer names are used for lookup.
-"
-" Storage for per-pwd terminals:
-"   g:term_shell_by_pwd[pwd]    = { bufnr, prevwid, prevtab, prevbuf }
-"   g:term_opencode_by_pwd[pwd] = { bufnr, prevwid, prevtab, prevbuf }
+local M = {}
 
-" Close all other visible terminal windows except the current one
-func! s:close_other_terminals(current_buf) abort
-  " Ensure g:term_shell_by_pwd is a proper Vim dictionary (not Lua table)
-  if !exists('g:term_shell_by_pwd') || type(g:term_shell_by_pwd) != type({})
-    let g:term_shell_by_pwd = {}
-  endif
+-- Per-pwd terminal state. Each entry: { bufnr, prevwid, prevtab, prevbuf }
+local term_shell_by_pwd = {}
+local term_opencode_by_pwd = {}
 
-  " Find all terminal buffers we're tracking
-  let tracked_bufs = []
-  for info in values(g:term_shell_by_pwd)
-    if info.bufnr > 0 && bufexists(info.bufnr)
-      call add(tracked_bufs, info.bufnr)
-    endif
-  endfor
+local function buf_valid(b)
+  return b and b > 0 and vim.api.nvim_buf_is_valid(b)
+end
 
-  " Find all windows showing tracked terminal buffers (except current)
-  for buf in tracked_bufs
-    if buf == a:current_buf
-      continue
-    endif
+local function is_empty_buffer(buf)
+  local lines = vim.api.nvim_buf_get_lines(buf or 0, 0, -1, false)
+  return #lines == 1 and lines[1] == ''
+end
 
-    " Find all windows showing this buffer
-    let wins = win_findbuf(buf)
-    for winid in wins
-      " Go to that window and close it
-      let prev_win = win_getid()
-      if win_gotoid(winid)
-        " If it's the only window in the tab, close the tab
-        if winnr('$') == 1 && tabpagenr('$') > 1
-          close
+local function close_other_terminals(current_buf, dict)
+  for _, info in pairs(dict) do
+    local b = info.bufnr
+    if not buf_valid(b) or b == current_buf then
+      goto next_buf
+    end
+
+    local wins = vim.fn.win_findbuf(b)
+    for _, winid in ipairs(wins) do
+      local prev_win = vim.api.nvim_get_current_win()
+      local ok = pcall(vim.api.nvim_set_current_win, winid)
+      if ok then
+        if vim.fn.winnr('$') == 1 and vim.fn.tabpagenr('$') > 1 then
+          vim.cmd('close')
         else
-          " Hide the buffer and close the window
-          hide
-        endif
-        " Try to go back to previous window
-        call win_gotoid(prev_win)
-      endif
-    endfor
-  endfor
-endfunc
+          vim.cmd('hide')
+        end
+        pcall(vim.api.nvim_set_current_win, prev_win)
+      end
+    end
 
-func! s:opencode_terminal_visible() abort
-  let opencodes = get(g:, 'term_opencode_by_pwd', {})
-  for info in values(opencodes)
-    let b = get(info, 'bufnr', 0)
-    if b > 0 && bufexists(b) && !empty(win_findbuf(b))
-      return 1
-    endif
-  endfor
-  return 0
-endfunc
+    ::next_buf::
+  end
+end
 
-func! s:shell_terminal_visible() abort
-  let shells = get(g:, 'term_shell_by_pwd', {})
-  for info in values(shells)
-    let b = get(info, 'bufnr', 0)
-    if b > 0 && bufexists(b) && !empty(win_findbuf(b))
-      return 1
-    endif
-  endfor
-  return 0
-endfunc
+local function terminal_visible_in_current_tab(dict)
+  local current_tab = vim.fn.tabpagenr()
+  for _, info in pairs(dict) do
+    local b = info.bufnr
+    if buf_valid(b) then
+      for _, winid in ipairs(vim.fn.win_findbuf(b)) do
+        local wininfo = vim.fn.win_id2tabwin(winid)
+        if #wininfo >= 2 and wininfo[1] == current_tab then
+          return true
+        end
+      end
+    end
+  end
+  return false
+end
 
-func! s:split_cmd(cnt, other_visible) abort
-  if a:cnt == 0 && a:other_visible
+local function split_cmd(cnt, other_visible)
+  if cnt == 0 and other_visible then
     return 'vsplit'
-  elseif a:cnt == 0
+  elseif cnt == 0 then
     return 'split'
   else
-    return a:cnt.'split'
-  endif
-endfunc
+    return cnt .. 'split'
+  end
+end
 
-func! s:ctrl_s(cnt, here) abort
-  let pwd = getcwd()
-  " Ensure g:term_shell_by_pwd is a proper Vim dictionary (not Lua table)
-  if !exists('g:term_shell_by_pwd') || type(g:term_shell_by_pwd) != type({})
-    let g:term_shell_by_pwd = {}
-  endif
+local function goto_previous_context(term_info)
+  local target_tab = term_info.prevtab
+  local target_buf = term_info.prevbuf
+  local target_winnr = 0
 
-  " If we're already in a terminal buffer, just go back to the previous window
-  if &buftype ==# 'terminal'
-    let tab = tabpagenr()
-    let term_prevwid = win_getid()
-    let curbuf = bufnr('%')
-
-    " Try to find the terminal info for this buffer
-    let term_info = {}
-    let pwd_list = get(g:, 'term_shell_by_pwd', {})
-    for [p, info] in items(pwd_list)
-      if type(info) == type({}) && get(info, 'bufnr', 0) == curbuf
-        let term_info = info
-        break
-      endif
-    endfor
-
-    if !empty(term_info)
-      " Try to go back to the previous tab first
-      let target_tab = get(term_info, 'prevtab', 0)
-      let target_buf = get(term_info, 'prevbuf', 0)
-
-      if target_tab > 0 && target_tab <= tabpagenr('$')
-        " Find where to go on the target tab BEFORE switching
-        let target_winnr = 0
-        if target_buf > 0 && bufexists(target_buf)
-          " Check if buffer is in a window on the target tab
-          let winid = bufwinid(target_buf)
-          if winid > 0
-            let wininfo = win_id2tabwin(winid)
-            " win_id2tabwin returns [tabnr, winnr] list
-            if len(wininfo) >= 2 && wininfo[0] == target_tab
-              let target_winnr = wininfo[1]
-            endif
-          endif
-        endif
-
-        " If buffer not found in a window, try the stored window ID
-        if target_winnr == 0
-          let prevwid = get(term_info, 'prevwid', 0)
-          if prevwid > 0
-            let prev_tabwin = win_id2tabwin(prevwid)
-            if len(prev_tabwin) >= 2 && prev_tabwin[0] == target_tab && prev_tabwin[1] > 0
-              let target_winnr = prev_tabwin[1]
-            endif
-          endif
-        endif
-
-        " Switch to the original tab
-        exe 'tabnext ' . target_tab
-
-        " Go to the target window if we found one
-        if target_winnr > 0
-          exe target_winnr . 'wincmd w'
-        elseif target_buf > 0 && bufexists(target_buf)
-          " Buffer exists but not in a window, show it in current window
-          exe 'buffer ' . target_buf
-        else
-          " Last resort: wincmd p
-          wincmd p
-        endif
-      else
-        " Previous tab doesn't exist, fallback to window ID
-        if get(term_info, 'prevwid', 0) > 0 && win_gotoid(term_info.prevwid)
-          " Successfully switched to window
-        else
-          wincmd p
-        endif
-      endif
-    else
-      " Fallback: try wincmd p
-      wincmd p
-    endif
-
-    return
-  endif
-
-  " Get or create terminal info for current pwd
-  if !has_key(g:term_shell_by_pwd, pwd)
-    let g:term_shell_by_pwd[pwd] = { 'bufnr': -1, 'prevwid': win_getid(), 'prevtab': tabpagenr(), 'prevbuf': bufnr('%') }
-  endif
-
-  let term_info = g:term_shell_by_pwd[pwd]
-  let b = term_info.bufnr
-
-  " Validate buffer still exists (might have been deleted)
-  if b > 0 && !bufexists(b)
-    let b = -1
-    let term_info.bufnr = -1
-  endif
-
-  if bufexists(b) && a:here  " Edit the :shell buffer in this window.
-    " First close any other visible terminals
-    call s:close_other_terminals(b)
-    exe 'buffer' b
-    setlocal nobuflisted
-    let term_info.prevwid = win_getid()
-    let term_info.prevtab = tabpagenr()
-    let term_info.prevbuf = bufnr('#')
-    return
-  endif
-
-  "
-  " Return to previous window, maybe close the :shell tabpage.
-  "
-  if bufnr('%') == b
-    let tab = tabpagenr()
-    let term_prevwid = win_getid()
-
-    " Try to go back to the previous tab first
-    let target_tab = get(term_info, 'prevtab', 0)
-    let target_buf = get(term_info, 'prevbuf', 0)
-
-    if target_tab > 0 && target_tab <= tabpagenr('$')
-      " Find where to go on the target tab BEFORE switching
-      let target_winnr = 0
-      if target_buf > 0 && bufexists(target_buf)
-        " Check if buffer is in a window on the target tab
-        let winid = bufwinid(target_buf)
-        if winid > 0
-          let wininfo = win_id2tabwin(winid)
-          " win_id2tabwin returns [tabnr, winnr] list
-          if len(wininfo) >= 2 && wininfo[0] == target_tab
-            let target_winnr = wininfo[1]
-          endif
-        endif
-      endif
-
-      " If buffer not found in a window, try the stored window ID
-      if target_winnr == 0
-        let prevwid = get(term_info, 'prevwid', 0)
-        if prevwid > 0
-          let prev_tabwin = win_id2tabwin(prevwid)
-          if len(prev_tabwin) >= 2 && prev_tabwin[0] == target_tab && prev_tabwin[1] > 0
-            let target_winnr = prev_tabwin[1]
-          endif
-        endif
-      endif
-
-      " Switch to the original tab
-      exe 'tabnext ' . target_tab
-
-      " Go to the target window if we found one
-      if target_winnr > 0
-        exe target_winnr . 'wincmd w'
-      elseif target_buf > 0 && bufexists(target_buf)
-        " Buffer exists but not in a window, show it in current window
-        exe 'buffer ' . target_buf
-      else
-        " Last resort: wincmd p
-        wincmd p
-      endif
-    else
-      " Previous tab doesn't exist, fallback to window ID
-      if get(term_info, 'prevwid', 0) > 0 && win_gotoid(term_info.prevwid)
-        " Successfully switched to window
-      else
-        wincmd p
-      endif
-    endif
-
-    if bufnr('%') == b
-      " Edge-case: :shell buffer showing in multiple windows in curtab.
-      " Find a non-:shell window in curtab.
-      let bufs = filter(tabpagebuflist(), 'v:val != '.b)
-      if len(bufs) > 0
-        exe bufwinnr(bufs[0]).'wincmd w'
-      else
-        " Last resort: can happen if :mksession restores an old :shell.
-        " tabprevious
-        if &buftype !=# 'terminal' && getline(1) == '' && line('$') == 1
-          " XXX: cleanup stale, empty :shell buffer (caused by :mksession).
-          bwipeout! %
-          " Try again.
-          call s:ctrl_s(a:cnt, a:here)
+  if target_tab and target_tab > 0 and target_tab <= vim.fn.tabpagenr('$') then
+    if buf_valid(target_buf) then
+      local winid = vim.fn.bufwinid(target_buf)
+      if winid > 0 then
+        local wininfo = vim.fn.win_id2tabwin(winid)
+        if #wininfo >= 2 and wininfo[1] == target_tab then
+          target_winnr = wininfo[2]
         end
-        return
-      endif
-    endif
-    let term_info.prevwid = term_prevwid
+      end
+    end
 
-    return
-  endif
+    if target_winnr == 0 then
+      local prevwid = term_info.prevwid
+      if prevwid and prevwid > 0 then
+        local prev_tabwin = vim.fn.win_id2tabwin(prevwid)
+        if #prev_tabwin >= 2 and prev_tabwin[1] == target_tab and prev_tabwin[2] > 0 then
+          target_winnr = prev_tabwin[2]
+        end
+      end
+    end
 
-  "
-  " Capture current context before potentially switching to terminal
-  "
-  let curbuf = bufnr('%')
-  let curtab = tabpagenr()
-  let curwinid = win_getid()
-
-  "
-  " Go to existing :shell or create a new one.
-  ""
-
-  " First, close any other visible terminals before showing this one
-  call s:close_other_terminals(b)
-
-  if a:cnt == 0 && bufexists(b) && winbufnr(term_info.prevwid) == b
-    " Go to :shell displayed in the previous window.
-    call win_gotoid(term_info.prevwid)
-  elseif bufexists(b)
-    " Go to existing :shell.
-
-    let w = bufwinid(b)
-    if a:cnt == 0 && w > 0
-      " Found in current tabpage.
-      call win_gotoid(w)
+    vim.cmd('tabnext ' .. target_tab)
+    if target_winnr > 0 then
+      vim.cmd(target_winnr .. 'wincmd w')
+    elseif buf_valid(target_buf) then
+      vim.api.nvim_set_current_buf(target_buf)
     else
-      " Not in current tabpage.
-      let ws = win_findbuf(b)
-      if a:cnt == 0 && !empty(ws)
-        " Found in another tabpage - switch to that tab and window.
-        let target_winid = ws[0]
-        let target_tab = win_id2tabwin(target_winid)[0]
-        if target_tab > 0
-          exe 'tabnext ' . target_tab
-        endif
-        call win_gotoid(target_winid)
-      else
-        " Not in any existing window; open a split.
-        exe s:split_cmd(a:cnt, s:opencode_terminal_visible())
-        exe 'buffer' b
-      endif
-    endif
-
-    if &buftype !=# 'terminal' && getline(1) == '' && line('$') == 1
-      call win_gotoid(term_info.prevwid)
-      " XXX: cleanup stale, empty :shell buffer (caused by :mksession).
-      exe 'bwipeout!' b
-      let term_info.bufnr = -1
-      " Try again.
-      call s:ctrl_s(a:cnt, a:here)
+      vim.cmd('wincmd p')
     end
   else
-    " Create new :shell for this pwd.
-    let origbuf = bufnr('%')
-    if !a:here
-      exe s:split_cmd(a:cnt, s:opencode_terminal_visible())
-    endif
-    terminal
-    setlocal scrollback=-1
-    let term_info.bufnr = bufnr('%')
-    let @# = origbuf
-    tnoremap <buffer> <C-s> <C-\><C-n>:call <SID>ctrl_s(0, v:false)<CR>
-  endif
+    local prevwid = term_info.prevwid
+    if prevwid and prevwid > 0 then
+      local ok = pcall(vim.api.nvim_set_current_win, prevwid)
+      if not ok then
+        vim.cmd('wincmd p')
+      end
+    else
+      vim.cmd('wincmd p')
+    end
+  end
+end
 
-  let term_info.prevwid = curwinid
-  let term_info.prevtab = curtab
-  let term_info.prevbuf = curbuf
-  setlocal nobuflisted
-endfunc
-nnoremap <C-s> :<C-u>call <SID>ctrl_s(v:count, v:false)<CR>
-nnoremap '<C-s> :<C-u>call <SID>ctrl_s(v:count, v:true)<CR>
+local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, is_opencode)
+  local pwd = vim.fn.getcwd()
 
-" Optional: Command to list all active pwd terminals
-func! s:list_shells() abort
-  let shells = get(g:, 'term_shell_by_pwd', {})
-  if empty(shells)
-    echo "No active shells"
-    return
-  endif
-  echo "Active shells by directory:"
-  for [pwd, info] in items(shells)
-    let exists = bufexists(info.bufnr) ? 'active' : 'stale'
-    let visible = bufwinnr(info.bufnr) > 0 ? ' (visible)' : ''
-    echo '  [' . exists . '] ' . pwd . visible
-  endfor
-endfunc
-command! Shells call s:list_shells()
-
-" Same per-pwd toggleable terminal logic for an opencode window on <C-x>.
-func! s:close_other_opencode_terminals(current_buf) abort
-  if !exists('g:term_opencode_by_pwd') || type(g:term_opencode_by_pwd) != type({})
-    let g:term_opencode_by_pwd = {}
-  endif
-
-  let tracked_bufs = []
-  for info in values(g:term_opencode_by_pwd)
-    if info.bufnr > 0 && bufexists(info.bufnr)
-      call add(tracked_bufs, info.bufnr)
-    endif
-  endfor
-
-  for buf in tracked_bufs
-    if buf == a:current_buf
-      continue
-    endif
-
-    let wins = win_findbuf(buf)
-    for winid in wins
-      let prev_win = win_getid()
-      if win_gotoid(winid)
-        if winnr('$') == 1 && tabpagenr('$') > 1
-          close
-        else
-          hide
-        endif
-        call win_gotoid(prev_win)
-      endif
-    endfor
-  endfor
-endfunc
-
-func! s:ctrl_x(cnt, here) abort
-  let pwd = getcwd()
-  if !exists('g:term_opencode_by_pwd') || type(g:term_opencode_by_pwd) != type({})
-    let g:term_opencode_by_pwd = {}
-  endif
-
-  if &buftype ==# 'terminal'
-    let tab = tabpagenr()
-    let term_prevwid = win_getid()
-    let curbuf = bufnr('%')
-
-    let term_info = {}
-    let pwd_list = get(g:, 'term_opencode_by_pwd', {})
-    for [p, info] in items(pwd_list)
-      if type(info) == type({}) && get(info, 'bufnr', 0) == curbuf
-        let term_info = info
+  -- Already in a terminal buffer: return to the previous context.
+  if vim.bo.buftype == 'terminal' then
+    local curbuf = vim.api.nvim_get_current_buf()
+    local term_info = nil
+    for _, info in pairs(dict) do
+      if info.bufnr == curbuf then
+        term_info = info
         break
-      endif
-    endfor
+      end
+    end
 
-    if !empty(term_info)
-      let target_tab = get(term_info, 'prevtab', 0)
-      let target_buf = get(term_info, 'prevbuf', 0)
-
-      if target_tab > 0 && target_tab <= tabpagenr('$')
-        let target_winnr = 0
-        if target_buf > 0 && bufexists(target_buf)
-          let winid = bufwinid(target_buf)
-          if winid > 0
-            let wininfo = win_id2tabwin(winid)
-            if len(wininfo) >= 2 && wininfo[0] == target_tab
-              let target_winnr = wininfo[1]
-            endif
-          endif
-        endif
-
-        if target_winnr == 0
-          let prevwid = get(term_info, 'prevwid', 0)
-          if prevwid > 0
-            let prev_tabwin = win_id2tabwin(prevwid)
-            if len(prev_tabwin) >= 2 && prev_tabwin[0] == target_tab && prev_tabwin[1] > 0
-              let target_winnr = prev_tabwin[1]
-            endif
-          endif
-        endif
-
-        exe 'tabnext ' . target_tab
-
-        if target_winnr > 0
-          exe target_winnr . 'wincmd w'
-        elseif target_buf > 0 && bufexists(target_buf)
-          exe 'buffer ' . target_buf
-        else
-          wincmd p
-        endif
-      else
-        if get(term_info, 'prevwid', 0) > 0 && win_gotoid(term_info.prevwid)
-        else
-          wincmd p
-        endif
-      endif
+    if term_info then
+      goto_previous_context(term_info)
     else
-      wincmd p
-    endif
-
+      vim.cmd('wincmd p')
+    end
     return
-  endif
+  end
 
-  if !has_key(g:term_opencode_by_pwd, pwd)
-    let g:term_opencode_by_pwd[pwd] = { 'bufnr': -1, 'prevwid': win_getid(), 'prevtab': tabpagenr(), 'prevbuf': bufnr('%') }
-  endif
+  -- Get or create terminal info for current pwd.
+  if not dict[pwd] then
+    dict[pwd] = {
+      bufnr = -1,
+      prevwid = vim.api.nvim_get_current_win(),
+      prevtab = vim.api.nvim_get_current_tabpage(),
+      prevbuf = vim.api.nvim_get_current_buf(),
+    }
+  end
 
-  let term_info = g:term_opencode_by_pwd[pwd]
-  let b = term_info.bufnr
+  local term_info = dict[pwd]
+  local b = term_info.bufnr
 
-  if b > 0 && !bufexists(b)
-    let b = -1
-    let term_info.bufnr = -1
-  endif
+  -- Validate buffer still exists.
+  if not buf_valid(b) then
+    b = -1
+    term_info.bufnr = -1
+  end
 
-  if bufexists(b) && a:here
-    call s:close_other_opencode_terminals(b)
-    exe 'buffer' b
-    setlocal nobuflisted
-    let term_info.prevwid = win_getid()
-    let term_info.prevtab = tabpagenr()
-    let term_info.prevbuf = bufnr('#')
+  -- Edit the terminal buffer in the current window.
+  if b > 0 and here then
+    close_other_terminals(b, dict)
+    vim.api.nvim_set_current_buf(b)
+    vim.bo.buflisted = false
+    term_info.prevwid = vim.api.nvim_get_current_win()
+    term_info.prevtab = vim.api.nvim_get_current_tabpage()
+    term_info.prevbuf = vim.fn.bufnr('#')
     return
-  endif
+  end
 
-  if bufnr('%') == b
-    let tab = tabpagenr()
-    let term_prevwid = win_getid()
+  -- Current buffer is the terminal: hide it and return to previous context.
+  if vim.api.nvim_get_current_buf() == b then
+    local term_prevwid = vim.api.nvim_get_current_win()
+    goto_previous_context(term_info)
 
-    let target_tab = get(term_info, 'prevtab', 0)
-    let target_buf = get(term_info, 'prevbuf', 0)
+    if vim.api.nvim_get_current_buf() == b then
+      local bufs = vim.tbl_filter(function(buf)
+        return buf ~= b
+      end, vim.fn.tabpagebuflist())
 
-    if target_tab > 0 && target_tab <= tabpagenr('$')
-      let target_winnr = 0
-      if target_buf > 0 && bufexists(target_buf)
-        let winid = bufwinid(target_buf)
-        if winid > 0
-          let wininfo = win_id2tabwin(winid)
-          if len(wininfo) >= 2 && wininfo[0] == target_tab
-            let target_winnr = wininfo[1]
-          endif
-        endif
-      endif
-
-      if target_winnr == 0
-        let prevwid = get(term_info, 'prevwid', 0)
-        if prevwid > 0
-          let prev_tabwin = win_id2tabwin(prevwid)
-          if len(prev_tabwin) >= 2 && prev_tabwin[0] == target_tab && prev_tabwin[1] > 0
-            let target_winnr = prev_tabwin[1]
-          endif
-        endif
-      endif
-
-      exe 'tabnext ' . target_tab
-
-      if target_winnr > 0
-        exe target_winnr . 'wincmd w'
-      elseif target_buf > 0 && bufexists(target_buf)
-        exe 'buffer ' . target_buf
+      if #bufs > 0 then
+        local winnr = vim.fn.bufwinnr(bufs[1])
+        if winnr > 0 then
+          vim.cmd(winnr .. 'wincmd w')
+        end
       else
-        wincmd p
-      endif
-    else
-      if get(term_info, 'prevwid', 0) > 0 && win_gotoid(term_info.prevwid)
-      else
-        wincmd p
-      endif
-    endif
-
-    if bufnr('%') == b
-      let bufs = filter(tabpagebuflist(), 'v:val != '.b)
-      if len(bufs) > 0
-        exe bufwinnr(bufs[0]).'wincmd w'
-      else
-        if &buftype !=# 'terminal' && getline(1) == '' && line('$') == 1
-          bwipeout! %
-          call s:ctrl_x(a:cnt, a:here)
+        if vim.bo.buftype ~= 'terminal' and is_empty_buffer(0) then
+          vim.api.nvim_buf_delete(0, { force = true })
+          ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible)
         end
         return
-      endif
-    endif
-    let term_info.prevwid = term_prevwid
+      end
+    end
 
+    term_info.prevwid = term_prevwid
     return
-  endif
+  end
 
-  let curbuf = bufnr('%')
-  let curtab = tabpagenr()
-  let curwinid = win_getid()
+  -- Capture current context before switching to the terminal.
+  local curbuf = vim.api.nvim_get_current_buf()
+  local curtab = vim.api.nvim_get_current_tabpage()
+  local curwinid = vim.api.nvim_get_current_win()
 
-  call s:close_other_opencode_terminals(b)
+  close_other_terminals(b, dict)
 
-  if a:cnt == 0 && bufexists(b) && winbufnr(term_info.prevwid) == b
-    call win_gotoid(term_info.prevwid)
-  elseif bufexists(b)
-    let w = bufwinid(b)
-    if a:cnt == 0 && w > 0
-      call win_gotoid(w)
+  -- Go to existing terminal or create a new one.
+  if cnt == 0 and b > 0 and vim.fn.winbufnr(term_info.prevwid) == b then
+    vim.api.nvim_set_current_win(term_info.prevwid)
+  elseif b > 0 then
+    local w = vim.fn.bufwinid(b)
+    if cnt == 0 and w > 0 then
+      vim.api.nvim_set_current_win(w)
     else
-      let ws = win_findbuf(b)
-      if a:cnt == 0 && !empty(ws)
-        let target_winid = ws[0]
-        let target_tab = win_id2tabwin(target_winid)[0]
-        if target_tab > 0
-          exe 'tabnext ' . target_tab
-        endif
-        call win_gotoid(target_winid)
+      local ws = vim.fn.win_findbuf(b)
+      if cnt == 0 and not vim.tbl_isempty(ws) then
+        local target_winid = ws[1]
+        local target_tab = vim.fn.win_id2tabwin(target_winid)[1]
+        if target_tab and target_tab > 0 then
+          vim.cmd('tabnext ' .. target_tab)
+        end
+        vim.api.nvim_set_current_win(target_winid)
       else
-        exe s:split_cmd(a:cnt, s:shell_terminal_visible())
-        exe 'buffer' b
-      endif
-    endif
+        vim.cmd(split_cmd(cnt, other_visible))
+        vim.api.nvim_set_current_buf(b)
+      end
+    end
 
-    if &buftype !=# 'terminal' && getline(1) == '' && line('$') == 1
-      call win_gotoid(term_info.prevwid)
-      exe 'bwipeout!' b
-      let term_info.bufnr = -1
-      call s:ctrl_x(a:cnt, a:here)
+    if vim.bo.buftype ~= 'terminal' and is_empty_buffer(0) then
+      pcall(vim.api.nvim_set_current_win, term_info.prevwid)
+      vim.api.nvim_buf_delete(b, { force = true })
+      term_info.bufnr = -1
+      ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible)
+      return
     end
   else
-    " Create new :opencode terminal for this pwd.
-    let origbuf = bufnr('%')
-    if !a:here
-      exe s:split_cmd(a:cnt, s:shell_terminal_visible())
-    endif
-    terminal $SHELL -c 'opencode -c || opencode'
-    setlocal scrollback=-1
-    let term_info.bufnr = bufnr('%')
-    let @# = origbuf
-  endif
+    -- Create a new terminal for this pwd.
+    if not here then
+      vim.cmd(split_cmd(cnt, other_visible))
+    end
 
-  let term_info.prevwid = curwinid
-  let term_info.prevtab = curtab
-  let term_info.prevbuf = curbuf
-  setlocal nobuflisted
-endfunc
-nnoremap <C-x> :<C-u>call <SID>ctrl_x(v:count, v:false)<CR>
-nnoremap '<C-x> :<C-u>call <SID>ctrl_x(v:count, v:true)<CR>
+    if cmd and cmd ~= '' then
+      vim.cmd('terminal ' .. cmd)
+    else
+      vim.cmd('terminal')
+    end
 
-func! s:list_opencodes() abort
-  let opencodes = get(g:, 'term_opencode_by_pwd', {})
-  if empty(opencodes)
-    echo "No active opencode terminals"
+    local new_buf = vim.api.nvim_get_current_buf()
+    vim.bo.scrollback = -1
+    term_info.bufnr = new_buf
+
+    if terminal_close_key then
+      vim.keymap.set('t', terminal_close_key, function()
+        vim.cmd('stopinsert')
+        ctrl_toggle(0, false, dict, cmd, terminal_close_key, other_visible, is_opencode)
+      end, { buffer = new_buf })
+    end
+
+    if is_opencode then
+      -- Scoping the buffer entirely to opencode: set keymaps once at creation.
+      -- Exit terminal mode
+      vim.api.nvim_buf_set_keymap(new_buf, 't', '<Esc>', '<C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Exit terminal mode' })
+      -- Opencode scrolling in normal mode (send to opencode TUI)
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-k>', 'i<PageUp><C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Scroll up' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-j>', 'i<PageDown><C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Scroll down' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-u>', 'i<C-PageUp><C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Half page up' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-d>', 'i<C-PageDown><C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Half page down' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', 'gg', 'i<Home><C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Jump to first message' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', 'G', 'i<End><C-\\><C-n>',
+        { noremap = true, silent = true, desc = 'Jump to last message' })
+    end
+  end
+
+  term_info.prevwid = curwinid
+  term_info.prevtab = curtab
+  term_info.prevbuf = curbuf
+  vim.bo.buflisted = false
+end
+
+function M.ctrl_s(cnt, here)
+  ctrl_toggle(cnt, here, term_shell_by_pwd, '', '<C-s>', terminal_visible_in_current_tab(term_opencode_by_pwd), false)
+end
+
+function M.ctrl_x(cnt, here)
+  ctrl_toggle(cnt, here, term_opencode_by_pwd, "$SHELL -c 'opencode -c || opencode'", nil, terminal_visible_in_current_tab(term_shell_by_pwd), true)
+end
+
+local function list_terminals(dict, label)
+  if vim.tbl_isempty(dict) then
+    print('No active ' .. label .. ' terminals')
     return
-  endif
-  echo "Active opencode terminals by directory:"
-  for [pwd, info] in items(opencodes)
-    let exists = bufexists(info.bufnr) ? 'active' : 'stale'
-    let visible = bufwinnr(info.bufnr) > 0 ? ' (visible)' : ''
-    echo '  [' . exists . '] ' . pwd . visible
-  endfor
-endfunc
-command! Opencodes call s:list_opencodes()
-]]
+  end
+
+  print('Active ' .. label .. ' terminals by directory:')
+  for pwd, info in pairs(dict) do
+    local exists = vim.api.nvim_buf_is_valid(info.bufnr) and 'active' or 'stale'
+    local visible = vim.fn.bufwinnr(info.bufnr) > 0 and ' (visible)' or ''
+    print('  [' .. exists .. '] ' .. pwd .. visible)
+  end
+end
+
+-- Keymaps
+vim.keymap.set('n', '<C-s>', function()
+  M.ctrl_s(vim.v.count, false)
+end, { remap = false })
+
+vim.keymap.set('n', "'<C-s>", function()
+  M.ctrl_s(vim.v.count, true)
+end, { remap = false })
+
+vim.keymap.set('n', '<C-x>', function()
+  M.ctrl_x(vim.v.count, false)
+end, { remap = false })
+
+vim.keymap.set('n', "'<C-x>", function()
+  M.ctrl_x(vim.v.count, true)
+end, { remap = false })
+
+-- Send selected lines to the opencode terminal for the current worktree.
+-- ctrl+x shell tracks the opencode terminal per-pwd, so we know which buffer is
+-- the relevant one for the current worktree.
+vim.keymap.set('v', 'O', function()
+  local start_line = vim.fn.line "'<"
+  local end_line = vim.fn.line "'>"
+  local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+
+  if #lines == 0 then
+    print 'No lines selected'
+    return
+  end
+
+  local filename = vim.fn.expand '%:p'
+  if filename == '' then
+    filename = '[unnamed]'
+  end
+
+  local context = string.format('File: %s (lines %d-%d)\n', filename, start_line, end_line)
+  local text = context .. table.concat(lines, '\n') .. '\n'
+
+  local pwd = vim.fn.getcwd()
+  local info = term_opencode_by_pwd[pwd]
+  local chan = nil
+  if info and buf_valid(info.bufnr) then
+    chan = vim.bo[info.bufnr].channel
+    if not chan or chan <= 0 then
+      chan = nil
+    end
+  end
+
+  if not chan then
+    print 'No OpenCode terminal found for this worktree'
+    return
+  end
+
+  vim.fn.chansend(chan, text)
+  print(('Sent %d lines from %s (%d-%d) to OpenCode'):format(#lines, filename, start_line, end_line))
+end, { desc = 'Send selected lines to OpenCode' })
+
+-- Commands
+vim.api.nvim_create_user_command('Shells', function()
+  list_terminals(term_shell_by_pwd, 'shell')
+end, {})
+
+vim.api.nvim_create_user_command('Opencodes', function()
+  list_terminals(term_opencode_by_pwd, 'opencode')
+end, {})
+
+-- Wipe tracked terminal buffers on exit so they don't leak into sessions.
+vim.api.nvim_create_autocmd('VimLeavePre', {
+  callback = function()
+    for _, dict in ipairs({ term_shell_by_pwd, term_opencode_by_pwd }) do
+      for _, info in pairs(dict) do
+        local b = info.bufnr
+        if buf_valid(b) then
+          pcall(vim.api.nvim_buf_delete, b, { force = true })
+        end
+        info.bufnr = -1
+      end
+    end
+  end,
+})
+
+return M

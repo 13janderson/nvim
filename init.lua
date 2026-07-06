@@ -1,6 +1,5 @@
 require 'globals'
 require 'custom.my.ctrl_s_shell'
-require 'custom.my.opencode'
 require 'custom.my.tabs'
 --[[
 --
