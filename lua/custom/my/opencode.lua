@@ -1,2 +1,0 @@
--- opencode terminal keymaps and line-sending are now managed by
--- custom.my.ctrl_s_shell, which tracks the opencode terminal per worktree.

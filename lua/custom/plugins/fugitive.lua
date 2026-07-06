@@ -1,6 +1,9 @@
 return {
   {
     'tpope/vim-fugitive',
+    dependencies = {
+      'justinmk/vim-ug',
+    },
     config = function(_)
       -- Use navigating merge conflict defaults for now [c for previous ]c for next conflict
       -- Set keybindings for resolving merge conflicts
@@ -82,20 +85,41 @@ return {
 
       local pre_diff_bufnr = nil
       local is_qf_open = function()
-        local wins = vim.api.nvim_tabpage_list_wins(0)
-        for _, win in ipairs(wins) do
-          if vim.fn.win_gettype(win) == 'quickfix' then
-            return true
+        for _, tp in ipairs(vim.api.nvim_list_tabpages()) do
+          for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tp)) do
+            if vim.fn.win_gettype(win) == 'quickfix' then
+              return true
+            end
           end
         end
         return false
       end
 
       local function diff_toggle_off()
-        vim.cmd 'diffoff!'
-        vim.cmd 'only'
-        close_fugitive_diffs()
-        if pre_diff_bufnr then
+        local diff_tabpage = nil
+        for _, tp in ipairs(vim.api.nvim_list_tabpages()) do
+          for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tp)) do
+            if vim.fn.win_gettype(win) == 'quickfix' then
+              diff_tabpage = tp
+              break
+            end
+          end
+          if diff_tabpage then
+            break
+          end
+        end
+
+        if diff_tabpage then
+          vim.api.nvim_set_current_tabpage(diff_tabpage)
+          vim.cmd 'diffoff!'
+          close_fugitive_diffs()
+          vim.cmd 'tabclose'
+        else
+          vim.cmd 'diffoff!'
+          close_fugitive_diffs()
+          vim.cmd 'only'
+        end
+        if pre_diff_bufnr and vim.api.nvim_buf_is_valid(pre_diff_bufnr) then
           vim.api.nvim_set_current_buf(pre_diff_bufnr)
           pre_diff_bufnr = nil
           local qfbufnr = vim.fn.getqflist({ qfbufnr = 0 }).qfbufnr
@@ -123,6 +147,7 @@ return {
           diff_toggle_off()
         else
           diff_toggle_on()
+          vim.cmd 'tab split'
           vim.cmd 'G difftool'
         end
       end)
@@ -133,6 +158,7 @@ return {
           diff_toggle_off()
         else
           diff_toggle_on()
+          vim.cmd 'tab split'
           vim.api.nvim_feedkeys(':G difftool ', 'n', false)
         end
       end)
