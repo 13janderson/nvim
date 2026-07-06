@@ -162,6 +162,17 @@ return {
           vim.api.nvim_feedkeys(':G difftool ', 'n', false)
         end
       end)
+
+      -- merge tool - resolve merge conflicts via quickfix + diffsplit in a new tab
+      vim.keymap.set('n', 'Um', function()
+        if is_qf_open() then
+          diff_toggle_off()
+        else
+          diff_toggle_on()
+          vim.cmd 'tab split'
+          vim.cmd 'G mergetool'
+        end
+      end)
     end,
   },
   {
