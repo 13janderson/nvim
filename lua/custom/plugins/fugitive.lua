@@ -173,6 +173,29 @@ return {
           vim.cmd 'G mergetool'
         end
       end)
+
+
+      -- git log
+      vim.keymap.set('n', 'Ul', function()
+        if is_qf_open() then
+          diff_toggle_off()
+        else
+          diff_toggle_on()
+          -- vim.cmd 'tab split'
+          vim.cmd 'G log'
+        end
+      end)
+
+      -- git log oneline
+      vim.keymap.set('n', 'UL', function()
+        if is_qf_open() then
+          diff_toggle_off()
+        else
+          diff_toggle_on()
+          -- vim.cmd 'tab split'
+          vim.cmd 'G log --oneline'
+        end
+      end)
     end,
   },
   {

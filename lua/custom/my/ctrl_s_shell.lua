@@ -4,6 +4,21 @@ local M = {}
 local term_shell_by_pwd = {}
 local term_opencode_by_pwd = {}
 
+-- Registry of togglable terminal dicts. Add future terminal types here.
+local term_dicts = {
+  term_shell_by_pwd,
+  term_opencode_by_pwd,
+}
+
+-- Anchor window per pwd: the text window any terminal was first spawned from.
+-- All toggles return here regardless of which terminal is active.
+local anchor_by_pwd = {}
+
+local function anchor_valid(pwd)
+  local a = anchor_by_pwd[pwd]
+  return a and a.winid and a.winid > 0 and vim.api.nvim_win_is_valid(a.winid)
+end
+
 local function buf_valid(b)
   return b and b > 0 and vim.api.nvim_buf_is_valid(b)
 end
@@ -25,10 +40,10 @@ local function close_other_terminals(current_buf, dict)
       local prev_win = vim.api.nvim_get_current_win()
       local ok = pcall(vim.api.nvim_set_current_win, winid)
       if ok then
-        if vim.fn.winnr('$') == 1 and vim.fn.tabpagenr('$') > 1 then
-          vim.cmd('close')
+        if vim.fn.winnr '$' == 1 and vim.fn.tabpagenr '$' > 1 then
+          vim.cmd 'close'
         else
-          vim.cmd('hide')
+          vim.cmd 'hide'
         end
         pcall(vim.api.nvim_set_current_win, prev_win)
       end
@@ -69,7 +84,7 @@ local function goto_previous_context(term_info)
   local target_buf = term_info.prevbuf
   local target_winnr = 0
 
-  if target_tab and target_tab > 0 and target_tab <= vim.fn.tabpagenr('$') then
+  if target_tab and target_tab > 0 and target_tab <= vim.fn.tabpagenr '$' then
     if buf_valid(target_buf) then
       local winid = vim.fn.bufwinid(target_buf)
       if winid > 0 then
@@ -96,17 +111,17 @@ local function goto_previous_context(term_info)
     elseif buf_valid(target_buf) then
       vim.api.nvim_set_current_buf(target_buf)
     else
-      vim.cmd('wincmd p')
+      vim.cmd 'wincmd p'
     end
   else
     local prevwid = term_info.prevwid
     if prevwid and prevwid > 0 then
       local ok = pcall(vim.api.nvim_set_current_win, prevwid)
       if not ok then
-        vim.cmd('wincmd p')
+        vim.cmd 'wincmd p'
       end
     else
-      vim.cmd('wincmd p')
+      vim.cmd 'wincmd p'
     end
   end
 end
@@ -114,23 +129,16 @@ end
 local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, is_opencode)
   local pwd = vim.fn.getcwd()
 
-  -- Already in a terminal buffer: return to the previous context.
+  -- Already in a terminal buffer owned by this toggle: return to previous context.
+  -- A foreign (other-toggle) terminal falls through to open the requested one.
   if vim.bo.buftype == 'terminal' then
     local curbuf = vim.api.nvim_get_current_buf()
-    local term_info = nil
     for _, info in pairs(dict) do
       if info.bufnr == curbuf then
-        term_info = info
-        break
+        goto_previous_context(info)
+        return
       end
     end
-
-    if term_info then
-      goto_previous_context(term_info)
-    else
-      vim.cmd('wincmd p')
-    end
-    return
   end
 
   -- Get or create terminal info for current pwd.
@@ -154,40 +162,29 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
 
   -- Edit the terminal buffer in the current window.
   if b > 0 and here then
+    local prev_buf = vim.api.nvim_get_current_buf()
+    local prev_win = vim.api.nvim_get_current_win()
+    local prev_tab = vim.api.nvim_get_current_tabpage()
+    local was_terminal = vim.bo.buftype == 'terminal'
+
     close_other_terminals(b, dict)
-    vim.api.nvim_set_current_buf(b)
-    vim.bo.buflisted = false
-    term_info.prevwid = vim.api.nvim_get_current_win()
-    term_info.prevtab = vim.api.nvim_get_current_tabpage()
-    term_info.prevbuf = vim.fn.bufnr('#')
-    return
-  end
-
-  -- Current buffer is the terminal: hide it and return to previous context.
-  if vim.api.nvim_get_current_buf() == b then
-    local term_prevwid = vim.api.nvim_get_current_win()
-    goto_previous_context(term_info)
-
-    if vim.api.nvim_get_current_buf() == b then
-      local bufs = vim.tbl_filter(function(buf)
-        return buf ~= b
-      end, vim.fn.tabpagebuflist())
-
-      if #bufs > 0 then
-        local winnr = vim.fn.bufwinnr(bufs[1])
-        if winnr > 0 then
-          vim.cmd(winnr .. 'wincmd w')
-        end
-      else
-        if vim.bo.buftype ~= 'terminal' and is_empty_buffer(0) then
-          vim.api.nvim_buf_delete(0, { force = true })
-          ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible)
-        end
-        return
-      end
+    if not was_terminal and not anchor_valid(pwd) then
+      anchor_by_pwd[pwd] = { winid = prev_win, tabpage = prev_tab, bufnr = prev_buf }
     end
 
-    term_info.prevwid = term_prevwid
+    vim.api.nvim_set_current_buf(b)
+    vim.bo.buflisted = false
+
+    if anchor_valid(pwd) then
+      local a = anchor_by_pwd[pwd]
+      term_info.prevwid = a.winid
+      term_info.prevtab = a.tabpage
+      term_info.prevbuf = a.bufnr
+    else
+      term_info.prevwid = prev_win
+      term_info.prevtab = prev_tab
+      term_info.prevbuf = prev_buf
+    end
     return
   end
 
@@ -195,6 +192,21 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
   local curbuf = vim.api.nvim_get_current_buf()
   local curtab = vim.api.nvim_get_current_tabpage()
   local curwinid = vim.api.nvim_get_current_win()
+
+  if vim.bo.buftype == 'terminal' then
+    -- Foreign terminal: return to the anchor window, not this terminal.
+    if anchor_valid(pwd) then
+      local a = anchor_by_pwd[pwd]
+      curwinid = a.winid
+      curtab = a.tabpage
+      curbuf = a.bufnr
+    end
+  else
+    -- Text window: record it as the anchor for this pwd if not yet set.
+    if not anchor_valid(pwd) then
+      anchor_by_pwd[pwd] = { winid = curwinid, tabpage = curtab, bufnr = curbuf }
+    end
+  end
 
   close_other_terminals(b, dict)
 
@@ -236,7 +248,7 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
     if cmd and cmd ~= '' then
       vim.cmd('terminal ' .. cmd)
     else
-      vim.cmd('terminal')
+      vim.cmd 'terminal'
     end
 
     local new_buf = vim.api.nvim_get_current_buf()
@@ -245,7 +257,7 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
 
     if terminal_close_key then
       vim.keymap.set('t', terminal_close_key, function()
-        vim.cmd('stopinsert')
+        vim.cmd 'stopinsert'
         ctrl_toggle(0, false, dict, cmd, terminal_close_key, other_visible, is_opencode)
       end, { buffer = new_buf })
     end
@@ -253,21 +265,14 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
     if is_opencode then
       -- Scoping the buffer entirely to opencode: set keymaps once at creation.
       -- Exit terminal mode
-      vim.api.nvim_buf_set_keymap(new_buf, 't', '<Esc>', '<C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Exit terminal mode' })
+      vim.api.nvim_buf_set_keymap(new_buf, 't', '<Esc>', '<C-\\><C-n>', { noremap = true, silent = true, desc = 'Exit terminal mode' })
       -- Opencode scrolling in normal mode (send to opencode TUI)
-      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-k>', 'i<PageUp><C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Scroll up' })
-      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-j>', 'i<PageDown><C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Scroll down' })
-      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-u>', 'i<C-PageUp><C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Half page up' })
-      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-d>', 'i<C-PageDown><C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Half page down' })
-      vim.api.nvim_buf_set_keymap(new_buf, 'n', 'gg', 'i<Home><C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Jump to first message' })
-      vim.api.nvim_buf_set_keymap(new_buf, 'n', 'G', 'i<End><C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Jump to last message' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-k>', 'i<PageUp><C-\\><C-n>', { noremap = true, silent = true, desc = 'Scroll up' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-j>', 'i<PageDown><C-\\><C-n>', { noremap = true, silent = true, desc = 'Scroll down' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-u>', 'i<C-PageUp><C-\\><C-n>', { noremap = true, silent = true, desc = 'Half page up' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-d>', 'i<C-PageDown><C-\\><C-n>', { noremap = true, silent = true, desc = 'Half page down' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', 'gg', 'i<Home><C-\\><C-n>', { noremap = true, silent = true, desc = 'Jump to first message' })
+      vim.api.nvim_buf_set_keymap(new_buf, 'n', 'G', 'i<End><C-\\><C-n>', { noremap = true, silent = true, desc = 'Jump to last message' })
     end
   end
 
@@ -368,7 +373,7 @@ end, {})
 -- Wipe tracked terminal buffers on exit so they don't leak into sessions.
 vim.api.nvim_create_autocmd('VimLeavePre', {
   callback = function()
-    for _, dict in ipairs({ term_shell_by_pwd, term_opencode_by_pwd }) do
+    for _, dict in ipairs(term_dicts) do
       for _, info in pairs(dict) do
         local b = info.bufnr
         if buf_valid(b) then
