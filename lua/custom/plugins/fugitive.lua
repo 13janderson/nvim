@@ -193,7 +193,7 @@ return {
         else
           diff_toggle_on()
           -- vim.cmd 'tab split'
-          vim.cmd 'G log --oneline'
+          vim.cmd 'G log %'
         end
       end)
     end,
