@@ -74,7 +74,7 @@ return {
     build = 'deno task --quiet build:fast',
     config = function()
       require('peek').setup {
-        app = vim.env.BROWSER or 'browser',
+        app = 'browser',
         auto_load = true,
       }
       vim.api.nvim_create_user_command('PeekOpen', require('peek').open, {})
