@@ -128,7 +128,7 @@ local function goto_previous_context(term_info)
   end
 end
 
-local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, is_opencode)
+local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, is_opencode, force_vsplit)
   local pwd = vim.fn.getcwd()
 
   -- Already in a terminal buffer owned by this toggle: return to previous context.
@@ -229,7 +229,7 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
         end
         vim.api.nvim_set_current_win(target_winid)
       else
-        vim.cmd(split_cmd(cnt, other_visible))
+        vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
         vim.api.nvim_set_current_buf(b)
       end
     end
@@ -238,13 +238,13 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
       pcall(vim.api.nvim_set_current_win, term_info.prevwid)
       vim.api.nvim_buf_delete(b, { force = true })
       term_info.bufnr = -1
-      ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible)
+      ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, is_opencode, force_vsplit)
       return
     end
   else
     -- Create a new terminal for this pwd.
     if not here then
-      vim.cmd(split_cmd(cnt, other_visible))
+      vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
     end
 
     if cmd and cmd ~= '' then
@@ -267,8 +267,8 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
     if is_opencode then
       -- Scoping the buffer entirely to opencode: set keymaps once at creation.
       -- Exit terminal mode
-      vim.api.nvim_buf_set_keymap(new_buf, 't', '<Esc>', '<C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Exit terminal mode' })
+      -- vim.api.nvim_buf_set_keymap(new_buf, 't', '<Esc>', '<C-\\><C-n>',
+      --   { noremap = true, silent = true, desc = 'Exit terminal mode' })
       -- Opencode scrolling in normal mode (send to opencode TUI)
       vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-k>', 'i<PageUp><C-\\><C-n>',
         { noremap = true, silent = true, desc = 'Scroll up' })
@@ -292,17 +292,17 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
 end
 
 function M.ctrl_s(cnt, here)
-  ctrl_toggle(cnt, here, term_shell_by_pwd, '', '<C-s>', terminal_visible_in_current_tab(term_opencode_by_pwd), false)
+  ctrl_toggle(cnt, here, term_shell_by_pwd, '', '<C-s>', terminal_visible_in_current_tab(term_opencode_by_pwd), false, false)
 end
 
 function M.ctrl_x(cnt, here)
   ctrl_toggle(cnt, here, term_opencode_by_pwd, "$SHELL -c 'opencode -c || opencode'", nil,
-    terminal_visible_in_current_tab(term_shell_by_pwd), true)
+    terminal_visible_in_current_tab(term_shell_by_pwd), true, false)
 end
 
 function M.ctrl_g(cnt, here)
   ctrl_toggle(cnt, here, term_hunk_by_pwd, 'hunk diff --watch', '<C-g>',
-    terminal_visible_in_current_tab(term_shell_by_pwd), false)
+    terminal_visible_in_current_tab(term_shell_by_pwd), false, true)
 end
 
 -- Keymaps
