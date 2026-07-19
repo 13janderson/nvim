@@ -16,12 +16,12 @@ local term_dicts = {
 local keymap_configs = {
   [term_opencode_by_pwd] = {
     n = {
-      { '<C-k>', 'i<PageUp><C-\\><C-n>', { desc = 'Scroll up' } },
-      { '<C-j>', 'i<PageDown><C-\\><C-n>', { desc = 'Scroll down' } },
-      { '<C-u>', 'i<C-PageUp><C-\\><C-n>', { desc = 'Half page up' } },
+      { '<C-k>', 'i<PageUp><C-\\><C-n>',     { desc = 'Scroll up' } },
+      { '<C-j>', 'i<PageDown><C-\\><C-n>',   { desc = 'Scroll down' } },
+      { '<C-u>', 'i<C-PageUp><C-\\><C-n>',   { desc = 'Half page up' } },
       { '<C-d>', 'i<C-PageDown><C-\\><C-n>', { desc = 'Half page down' } },
-      { 'gg', 'i<Home><C-\\><C-n>', { desc = 'Jump to first message' } },
-      { 'G', 'i<End><C-\\><C-n>', { desc = 'Jump to last message' } },
+      { 'gg',    'i<Home><C-\\><C-n>',       { desc = 'Jump to first message' } },
+      { 'G',     'i<End><C-\\><C-n>',        { desc = 'Jump to last message' } },
     },
   },
   [term_hunk_by_pwd] = {
@@ -143,6 +143,27 @@ local function goto_previous_context(term_info)
       end
     else
       vim.cmd 'wincmd p'
+    end
+  end
+end
+
+local function kill_hunk_sessions()
+  local output = vim.fn.system('hunk session list --json')
+  if vim.v.shell_error ~= 0 then
+    return
+  end
+  local ok, data = pcall(vim.json.decode, output)
+  if not ok or not data then
+    return
+  end
+  local sessions = data.sessions
+  if type(sessions) ~= 'table' then
+    return
+  end
+  local cwd = vim.uv.cwd()
+  for _, session in ipairs(sessions) do
+    if session.pid and type(session.pid) == 'number' and session.cwd == cwd then
+      vim.uv.kill(session.pid, 9)
     end
   end
 end
@@ -326,6 +347,11 @@ function M.ctrl_x(cnt, here)
 end
 
 function M.ctrl_g(cnt, here)
+  local pwd = vim.fn.getcwd()
+  local existing = term_hunk_by_pwd[pwd]
+  if not (existing and buf_valid(existing.bufnr)) then
+    kill_hunk_sessions()
+  end
   ctrl_toggle(cnt, here, term_hunk_by_pwd, 'hunk diff --watch', '<C-g>',
     terminal_visible_in_current_tab(term_shell_by_pwd), true)
 end
