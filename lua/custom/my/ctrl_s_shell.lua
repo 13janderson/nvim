@@ -12,6 +12,25 @@ local term_dicts = {
   term_hunk_by_pwd,
 }
 
+-- Keymaps applied to terminal buffers on creation, keyed by terminal type dict.
+local keymap_configs = {
+  [term_opencode_by_pwd] = {
+    n = {
+      { '<C-k>', 'i<PageUp><C-\\><C-n>', { desc = 'Scroll up' } },
+      { '<C-j>', 'i<PageDown><C-\\><C-n>', { desc = 'Scroll down' } },
+      { '<C-u>', 'i<C-PageUp><C-\\><C-n>', { desc = 'Half page up' } },
+      { '<C-d>', 'i<C-PageDown><C-\\><C-n>', { desc = 'Half page down' } },
+      { 'gg', 'i<Home><C-\\><C-n>', { desc = 'Jump to first message' } },
+      { 'G', 'i<End><C-\\><C-n>', { desc = 'Jump to last message' } },
+    },
+  },
+  [term_hunk_by_pwd] = {
+    t = {
+      { '<C-C>', '<Esc>', { desc = 'Exit terminal mode' } },
+    },
+  },
+}
+
 -- Anchor window per pwd: the text window any terminal was first spawned from.
 -- All toggles return here regardless of which terminal is active.
 local anchor_by_pwd = {}
@@ -128,7 +147,7 @@ local function goto_previous_context(term_info)
   end
 end
 
-local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, is_opencode, force_vsplit)
+local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, force_vsplit)
   local pwd = vim.fn.getcwd()
 
   -- Already in a terminal buffer owned by this toggle: return to previous context.
@@ -162,18 +181,33 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
     term_info.bufnr = -1
   end
 
-  -- Edit the terminal buffer in the current window.
+  -- Bring the terminal buffer into a split in the current tab.
   if b > 0 and here then
-    local prev_buf = vim.api.nvim_get_current_buf()
     local prev_win = vim.api.nvim_get_current_win()
     local prev_tab = vim.api.nvim_get_current_tabpage()
+    local prev_buf = vim.api.nvim_get_current_buf()
     local was_terminal = vim.bo.buftype == 'terminal'
 
     close_other_terminals(b, dict)
+
+    -- Close the terminal buffer from any other windows/tabs.
+    for _, winid in ipairs(vim.fn.win_findbuf(b)) do
+      local ok = pcall(vim.api.nvim_set_current_win, winid)
+      if ok then
+        if vim.fn.winnr '$' == 1 and vim.fn.tabpagenr '$' > 1 then
+          vim.cmd 'close'
+        else
+          vim.cmd 'hide'
+        end
+      end
+    end
+    pcall(vim.api.nvim_set_current_win, prev_win)
+
     if not was_terminal and not anchor_valid(pwd) then
       anchor_by_pwd[pwd] = { winid = prev_win, tabpage = prev_tab, bufnr = prev_buf }
     end
 
+    vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
     vim.api.nvim_set_current_buf(b)
     vim.bo.buflisted = false
 
@@ -238,7 +272,7 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
       pcall(vim.api.nvim_set_current_win, term_info.prevwid)
       vim.api.nvim_buf_delete(b, { force = true })
       term_info.bufnr = -1
-      ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, is_opencode, force_vsplit)
+      ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, force_vsplit)
       return
     end
   else
@@ -260,28 +294,19 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
     if terminal_close_key then
       vim.keymap.set('t', terminal_close_key, function()
         vim.cmd 'stopinsert'
-        ctrl_toggle(0, false, dict, cmd, terminal_close_key, other_visible, is_opencode)
+        ctrl_toggle(0, false, dict, cmd, terminal_close_key, other_visible)
       end, { buffer = new_buf })
     end
 
-    if is_opencode then
-      -- Scoping the buffer entirely to opencode: set keymaps once at creation.
-      -- Exit terminal mode
-      -- vim.api.nvim_buf_set_keymap(new_buf, 't', '<Esc>', '<C-\\><C-n>',
-      --   { noremap = true, silent = true, desc = 'Exit terminal mode' })
-      -- Opencode scrolling in normal mode (send to opencode TUI)
-      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-k>', 'i<PageUp><C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Scroll up' })
-      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-j>', 'i<PageDown><C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Scroll down' })
-      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-u>', 'i<C-PageUp><C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Half page up' })
-      vim.api.nvim_buf_set_keymap(new_buf, 'n', '<C-d>', 'i<C-PageDown><C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Half page down' })
-      vim.api.nvim_buf_set_keymap(new_buf, 'n', 'gg', 'i<Home><C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Jump to first message' })
-      vim.api.nvim_buf_set_keymap(new_buf, 'n', 'G', 'i<End><C-\\><C-n>',
-        { noremap = true, silent = true, desc = 'Jump to last message' })
+    local buf_keymaps = keymap_configs[dict]
+    if buf_keymaps then
+      for mode, mappings in pairs(buf_keymaps) do
+        for _, m in ipairs(mappings) do
+          local opts = vim.deepcopy(m[3] or {})
+          opts.buffer = new_buf
+          vim.keymap.set(mode, m[1], m[2], opts)
+        end
+      end
     end
   end
 
@@ -292,17 +317,17 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
 end
 
 function M.ctrl_s(cnt, here)
-  ctrl_toggle(cnt, here, term_shell_by_pwd, '', '<C-s>', terminal_visible_in_current_tab(term_opencode_by_pwd), false, false)
+  ctrl_toggle(cnt, here, term_shell_by_pwd, '', '<C-s>', terminal_visible_in_current_tab(term_opencode_by_pwd), false)
 end
 
 function M.ctrl_x(cnt, here)
   ctrl_toggle(cnt, here, term_opencode_by_pwd, "$SHELL -c 'opencode -c || opencode'", nil,
-    terminal_visible_in_current_tab(term_shell_by_pwd), true, false)
+    terminal_visible_in_current_tab(term_shell_by_pwd), false)
 end
 
 function M.ctrl_g(cnt, here)
   ctrl_toggle(cnt, here, term_hunk_by_pwd, 'hunk diff --watch', '<C-g>',
-    terminal_visible_in_current_tab(term_shell_by_pwd), false, true)
+    terminal_visible_in_current_tab(term_shell_by_pwd), true)
 end
 
 -- Keymaps
@@ -323,7 +348,6 @@ vim.keymap.set('n', "'<C-x>", function()
 end, { remap = false })
 
 vim.keymap.set('n', '<C-g>', function()
-  print 'finbars'
   M.ctrl_g(vim.v.count, false)
 end, { remap = false })
 
