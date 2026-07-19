@@ -168,7 +168,6 @@ vim.api.nvim_create_autocmd('QuickFixCmdPost', {
   end,
 })
 
-vim.keymap.set('t', '<C-C>', '<Esc>', { desc = 'Exit terminal mode' })
 vim.keymap.set('t', '<C-]><C-n>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 vim.keymap.set('t', '<C-]>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
