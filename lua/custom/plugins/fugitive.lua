@@ -186,14 +186,14 @@ return {
         end
       end)
 
-      -- git log oneline
+      -- git log for current file
       vim.keymap.set('n', 'UL', function()
         if is_qf_open() then
           diff_toggle_off()
         else
           diff_toggle_on()
           -- vim.cmd 'tab split'
-          vim.cmd 'G log --oneline'
+          vim.cmd 'G log %'
         end
       end)
     end,
