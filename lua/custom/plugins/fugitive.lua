@@ -174,45 +174,26 @@ return {
         end
       end)
 
-
       -- git log
       vim.keymap.set('n', 'Ul', function()
-        if is_qf_open() then
-          diff_toggle_off()
-        else
-          diff_toggle_on()
-          -- vim.cmd 'tab split'
-          vim.cmd 'G log'
-        end
+        vim.cmd 'G log'
       end)
 
       -- git log --oneline
       vim.keymap.set('n', '1Ul', function()
-        if is_qf_open() then
-          diff_toggle_off()
-        else
-          diff_toggle_on()
-          -- vim.cmd 'tab split'
-          vim.cmd 'G log --oneline'
-        end
+        vim.cmd 'G log --oneline'
       end)
 
       -- git log for current file
       vim.keymap.set('n', 'UL', function()
-        if is_qf_open() then
-          diff_toggle_off()
-        else
-          diff_toggle_on()
-          -- vim.cmd 'tab split'
-          vim.cmd 'G log %'
-        end
+        vim.cmd 'G log %'
       end)
     end,
   },
   {
     'justinmk/vim-ug',
     config = function()
-      -- override this keymap for alternating between files
+      -- keymap overrides
       vim.keymap.set('n', '<c-p>', '<c-^>', { noremap = false, silent = true })
       local push = function()
         vim.cmd 'G push --no-verify'
