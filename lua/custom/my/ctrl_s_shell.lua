@@ -4,12 +4,14 @@ local M = {}
 local term_shell_by_pwd = {}
 local term_opencode_by_pwd = {}
 local term_hunk_by_pwd = {}
+local term_lazydocker_by_pwd = {}
 
 -- Registry of togglable terminal dicts. Add future terminal types here.
 local term_dicts = {
   term_shell_by_pwd,
   term_opencode_by_pwd,
   term_hunk_by_pwd,
+  term_lazydocker_by_pwd,
 }
 
 -- Keymaps applied to terminal buffers on creation, keyed by terminal type dict.
@@ -168,7 +170,7 @@ local function kill_hunk_sessions()
   end
 end
 
-local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, force_vsplit)
+local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, force_vsplit, new_tab)
   local pwd = vim.fn.getcwd()
 
   -- Already in a terminal buffer owned by this toggle: return to previous context.
@@ -177,6 +179,9 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
     local curbuf = vim.api.nvim_get_current_buf()
     for _, info in pairs(dict) do
       if info.bufnr == curbuf then
+        if new_tab and vim.fn.winnr '$' == 1 and vim.fn.tabpagenr '$' > 1 then
+          vim.cmd 'tabclose'
+        end
         goto_previous_context(info)
         return
       end
@@ -228,7 +233,11 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
       anchor_by_pwd[pwd] = { winid = prev_win, tabpage = prev_tab, bufnr = prev_buf }
     end
 
-    vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
+    if new_tab then
+      vim.cmd 'tabnew'
+    else
+      vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
+    end
     vim.api.nvim_set_current_buf(b)
     vim.bo.buflisted = false
 
@@ -284,7 +293,11 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
         end
         vim.api.nvim_set_current_win(target_winid)
       else
-        vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
+        if new_tab then
+          vim.cmd 'tabnew'
+        else
+          vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
+        end
         vim.api.nvim_set_current_buf(b)
       end
     end
@@ -293,13 +306,17 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
       pcall(vim.api.nvim_set_current_win, term_info.prevwid)
       vim.api.nvim_buf_delete(b, { force = true })
       term_info.bufnr = -1
-      ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, force_vsplit)
+      ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visible, force_vsplit, new_tab)
       return
     end
   else
     -- Create a new terminal for this pwd.
     if not here then
-      vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
+      if new_tab then
+        vim.cmd 'tabnew'
+      else
+        vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
+      end
     end
 
     if cmd and cmd ~= '' then
@@ -315,7 +332,7 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
     if terminal_close_key then
       vim.keymap.set('t', terminal_close_key, function()
         vim.cmd 'stopinsert'
-        ctrl_toggle(0, false, dict, cmd, terminal_close_key, other_visible)
+        ctrl_toggle(0, false, dict, cmd, terminal_close_key, other_visible, force_vsplit, new_tab)
       end, { buffer = new_buf })
     end
 
@@ -356,6 +373,18 @@ function M.ctrl_g(cnt, here)
     terminal_visible_in_current_tab(term_shell_by_pwd), true)
 end
 
+-- Lazydocker toggle. Requires lazydocker to be installed (https://github.com/jesseduffield/lazydocker).
+-- NOTE: <C-t> overrides the default Vim "pop tag" mapping. If you use ctags,
+-- consider remapping this to something else (e.g. <leader>ld).
+function M.ctrl_t(cnt, here)
+  if vim.fn.executable 'lazydocker' == 0 then
+    vim.notify('lazydocker not found. Install it: https://github.com/jesseduffield/lazydocker', vim.log.levels.WARN)
+    return
+  end
+  ctrl_toggle(cnt, here, term_lazydocker_by_pwd, 'lazydocker', '<C-t>',
+    terminal_visible_in_current_tab(term_shell_by_pwd), true, true)
+end
+
 -- Keymaps
 vim.keymap.set('n', '<C-s>', function()
   M.ctrl_s(vim.v.count, false)
@@ -379,6 +408,14 @@ end, { remap = false })
 
 vim.keymap.set('n', "'<C-g>", function()
   M.ctrl_g(vim.v.count, true)
+end, { remap = false })
+
+vim.keymap.set('n', '<C-t>', function()
+  M.ctrl_t(vim.v.count, false)
+end, { remap = false })
+
+vim.keymap.set('n', "'<C-t>", function()
+  M.ctrl_t(vim.v.count, true)
 end, { remap = false })
 
 -- Send selected lines to the opencode terminal for the current worktree.
@@ -439,6 +476,12 @@ vim.api.nvim_create_autocmd('UIEnter', {
     end, { remap = false })
     vim.keymap.set('n', "'<C-g>", function()
       M.ctrl_g(vim.v.count, true)
+    end, { remap = false })
+    vim.keymap.set('n', '<C-t>', function()
+      M.ctrl_t(vim.v.count, false)
+    end, { remap = false })
+    vim.keymap.set('n', "'<C-t>", function()
+      M.ctrl_t(vim.v.count, true)
     end, { remap = false })
   end,
 })

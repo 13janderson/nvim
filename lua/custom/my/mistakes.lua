@@ -40,3 +40,6 @@ for _, c in ipairs(commands) do
     end
   end
 end
+
+-- Prevent accidentally opening the command-line window when typing :q:
+vim.cmd("cnoreabbrev <expr> q: ((getcmdtype() == ':' && getcmdline() == 'q:') ? 'q' : 'q:')")

@@ -15,7 +15,9 @@ return {
       })
       vim.g.dbs = {
         localhost = 'mysql://root:password@127.0.0.1:3306',
-        localhost_2 = 'mysql://root:password@127.0.0.1:3307/defects'
+        localhost_2 = 'mysql://root:password@127.0.0.1:3307/defects',
+        rgs_postgres = 'postgresql://postgres:Dev_9xK2mP7qL3@127.0.0.1:5433/versa-dev',
+        wallet_postgres = 'postgresql://postgres:Dev_9xK2mP7qL3@127.0.0.1:5434/versa_wallet',
       }
     end,
   },

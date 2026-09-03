@@ -1,6 +1,7 @@
 require 'globals'
 require 'custom.my.ctrl_s_shell'
 require 'custom.my.tabs'
+require 'custom.my.mistakes'
 --[[
 --
 o====================================================================
@@ -48,7 +49,7 @@ vim.keymap.set('n', 'gl', function()
 end)
 
 -- Enable ui2 Avoids "Press ENTER" interruptions.
-require('vim._core.ui2').enable({})
+require('vim._core.ui2').enable {}
 
 -- [[ Setting options ]]
 -- See `:help vim.opt`
@@ -150,7 +151,6 @@ vim.api.nvim_create_autocmd('FileType', {
   end,
 })
 
-
 -- Quickfix will go to the first quickfix entry automatically. This may not always be a valid quickfix entry.
 -- Autocmd goes over all qf entries and goes to the first valid one.
 vim.api.nvim_create_autocmd('QuickFixCmdPost', {
@@ -173,22 +173,22 @@ vim.keymap.set('t', '<C-]>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 local last_buffer_cwd = nil
 
-vim.api.nvim_create_autocmd({ "BufLeave" }, {
+vim.api.nvim_create_autocmd({ 'BufLeave' }, {
   callback = function()
-    if vim.bo.buftype ~= "terminal" then
+    if vim.bo.buftype ~= 'terminal' then
       last_buffer_cwd = vim.uv.cwd()
     end
-  end
+  end,
 })
-vim.api.nvim_create_autocmd({ "BufEnter", "TermEnter", "TermLeave" }, {
-  desc = "cd to buffer cwd on enter",
+vim.api.nvim_create_autocmd({ 'BufEnter', 'TermEnter', 'TermLeave' }, {
+  desc = 'cd to buffer cwd on enter',
   callback = function()
-    if vim.bo.buftype == "terminal" then
+    if vim.bo.buftype == 'terminal' then
       -- Terminal buffer: use /proc/<pid>/cwd
       if vim.b.terminal_job_pid == nil then
         return
       end
-      local cwd = vim.fn.resolve("/proc/" .. vim.b.terminal_job_pid .. "/cwd")
+      local cwd = vim.fn.resolve('/proc/' .. vim.b.terminal_job_pid .. '/cwd')
       if vim.fn.isdirectory(cwd) == 0 then
         return
       end
@@ -202,7 +202,7 @@ vim.api.nvim_create_autocmd({ "BufEnter", "TermEnter", "TermLeave" }, {
 -- Primagen keymaps
 -- Tmux sessionizer
 vim.keymap.set('n', '<C-f>', '<cmd>silent !tmux neww tmux-sessionizer.sh<CR>')
-vim.keymap.set('n', "<leader>x", ToggleScratch)
+vim.keymap.set('n', '<leader>x', ToggleScratch)
 
 -- Yank to system clipboard
 vim.keymap.set({ 'n', 'v' }, '<leader>y', [["+y]])
