@@ -6,7 +6,7 @@ local commands = {
 }
 
 local suffixes = {
-  '!'
+  '!',
 }
 
 local function variants(str)
@@ -42,4 +42,5 @@ for _, c in ipairs(commands) do
 end
 
 -- Prevent accidentally opening the command-line window when typing :q:
-vim.cmd("cnoreabbrev <expr> q: ((getcmdtype() == ':' && getcmdline() == 'q:') ? 'q' : 'q:')")
+vim.keymap.set('n', 'q:', ':q<CR>')
+-- vim.cmd "cnoreabbrev <expr> q: ((getcmdtype() == ':' && getcmdline() == 'q:') ? 'q' : 'q:')"
