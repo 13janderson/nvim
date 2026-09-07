@@ -49,6 +49,7 @@ return {
 
       for _, language in ipairs(js_filetypes) do
         dap.configurations[language] = {
+          -- Default when pressing <leader>dc on .spec/.test files
           {
             type = 'pwa-node',
             request = 'launch',
@@ -57,6 +58,22 @@ return {
             runtimeExecutable = 'tsx',
             cwd = '${workspaceFolder}',
             sourceMaps = true,
+            console = 'integratedTerminal',
+            internalConsoleOptions = 'neverOpen',
+            skipFiles = { '<node_internals>/**', '${workspaceFolder}/node_modules/**' },
+          },
+          {
+            type = 'pwa-node',
+            request = 'launch',
+            name = 'Debug current Jest test file',
+            runtimeExecutable = 'node',
+            runtimeArgs = {
+              './node_modules/jest/bin/jest.js',
+              '--runInBand',
+            },
+            args = { '${file}' },
+            rootPath = '${workspaceFolder}',
+            cwd = '${workspaceFolder}',
             console = 'integratedTerminal',
             internalConsoleOptions = 'neverOpen',
             skipFiles = { '<node_internals>/**', '${workspaceFolder}/node_modules/**' },
@@ -213,15 +230,9 @@ return {
         },
       }
 
-      -- Auto-open when debugging starts; close when session ends
+      -- Auto-open when debugging starts
       dap.listeners.after.event_initialized['dapui_config'] = function()
         dapui.open()
-      end
-      dap.listeners.before.event_terminated['dapui_config'] = function()
-        dapui.close()
-      end
-      dap.listeners.before.event_exited['dapui_config'] = function()
-        dapui.close()
       end
 
       vim.keymap.set('n', '<leader>du', dapui.toggle, { desc = 'DAPUI: Toggle' })
