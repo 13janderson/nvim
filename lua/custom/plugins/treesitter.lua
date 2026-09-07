@@ -71,5 +71,5 @@ return {
     --   additional_vim_regex_highlighting = { 'ruby', 'markdown' },
     -- },
     -- indent = { enable = true, disable = { 'ruby', 'sql' } },
-  },
+  }
 }

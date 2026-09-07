@@ -1,4 +1,5 @@
 return {
-  "tpope/vim-dispatch"
-  -- Make[!] % to run selected compiler over current file [in background].
+   dir = '~/projects/runner.nvim'
+  -- '13janderson/runner.nvim',
+  -- dir = '~/projects/runner.nvim',
 }

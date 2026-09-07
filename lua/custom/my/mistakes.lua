@@ -43,4 +43,3 @@ end
 
 -- Prevent accidentally opening the command-line window when typing :q:
 vim.keymap.set('n', 'q:', ':q<CR>')
--- vim.cmd "cnoreabbrev <expr> q: ((getcmdtype() == ':' && getcmdline() == 'q:') ? 'q' : 'q:')"
