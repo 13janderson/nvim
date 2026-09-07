@@ -1,7 +1,9 @@
 local commands = {
   'w',
   'q',
+  'qa',
   'wq',
+  'wqa',
   'e',
 }
 
@@ -42,4 +44,4 @@ for _, c in ipairs(commands) do
 end
 
 -- Prevent accidentally opening the command-line window when typing :q:
-vim.keymap.set('n', 'q:', ':q<CR>')
+-- vim.keymap.set('n', 'q:', ':q<CR>')

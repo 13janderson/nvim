@@ -136,10 +136,11 @@ return {
       map('<leader>dp', dap.pause, 'Pause')
       map('<leader>dx', dap.terminate, 'Terminate')
 
+
       -- Virtual text for current debug line
       local ok, dap_vt = pcall(require, 'nvim-dap-virtual-text')
       if ok then
-        dap_vt.setup()
+        dap_vt.setup({})
       end
     end,
   },
@@ -191,6 +192,7 @@ return {
       require('dap-go').setup {
         delve = {
           path = 'dlv',
+          args = { '--check-go-version=false' },
         },
       }
     end,
