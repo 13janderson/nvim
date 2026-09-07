@@ -14,9 +14,9 @@ return {
       -- "nvim-dap-config" — it handles the boring adapter setup for you.
       require('mason-nvim-dap').setup {
         ensure_installed = {
-          'python',       -- debugpy
-          'js',           -- js-debug-adapter (pwa-node)
-          'node2',        -- node-debug2-adapter (fallback)
+          'python', -- debugpy
+          'js',     -- js-debug-adapter (pwa-node)
+          'node2',  -- node-debug2-adapter (fallback)
         },
         automatic_installation = true,
         handlers = {},
@@ -106,18 +106,18 @@ return {
         vim.keymap.set('n', lhs, rhs, { desc = 'DAP: ' .. desc })
       end
 
-      map('<leader>dc', dap.continue,          'Continue / Start')
-      map('<leader>do', dap.step_over,         'Step Over')
-      map('<leader>dI', dap.step_into,         'Step Into')
-      map('<leader>dO', dap.step_out,          'Step Out')
+      map('<leader>dc', dap.continue, 'Continue / Start')
+      map('<leader>do', dap.step_over, 'Step Over')
+      map('<leader>dI', dap.step_into, 'Step Into')
+      map('<leader>dO', dap.step_out, 'Step Out')
       map('<leader>db', dap.toggle_breakpoint, 'Toggle Breakpoint')
       map('<leader>dB', function()
-        dap.set_breakpoint(vim.fn.input('Breakpoint condition: '))
+        dap.set_breakpoint(vim.fn.input 'Breakpoint condition: ')
       end, 'Conditional Breakpoint')
-      map('<leader>dr', dap.run_to_cursor,     'Run to Cursor')
-      map('<leader>dl', dap.run_last,          'Run Last')
-      map('<leader>dp', dap.pause,             'Pause')
-      map('<leader>dx', dap.terminate,         'Terminate')
+      map('<leader>dr', dap.run_to_cursor, 'Run to Cursor')
+      map('<leader>dl', dap.run_last, 'Run Last')
+      map('<leader>dp', dap.pause, 'Pause')
+      map('<leader>dx', dap.terminate, 'Terminate')
 
       -- Virtual text for current debug line
       local ok, dap_vt = pcall(require, 'nvim-dap-virtual-text')
@@ -140,28 +140,26 @@ return {
       local mason_registry = require 'mason-registry'
       local debugpy_path
       if mason_registry.is_installed 'debugpy' then
-        local pkg = mason_registry.get_package 'debugpy'
-        debugpy_path = pkg:get_install_path() .. '/venv/bin/python'
+        local InstallLocation = require 'mason-core.installer.InstallLocation'
+        debugpy_path = InstallLocation.global():package 'debugpy' .. '/venv/bin/python'
       else
-        debugpy_path = vim.fn.exepath 'python3' or vim.fn.exepath 'python'
+        local py3 = vim.fn.exepath 'python3'
+        debugpy_path = (py3 ~= '' and py3) or vim.fn.exepath 'python'
       end
 
       require('dap-python').setup(debugpy_path)
 
       -- Add a "Run pytest at cursor" config
-      require('dap').configurations.python = vim.list_extend(
-        require('dap').configurations.python or {},
+      require('dap').configurations.python = vim.list_extend(require('dap').configurations.python or {}, {
         {
-          {
-            type = 'python',
-            request = 'launch',
-            name = 'pytest: current file',
-            module = 'pytest',
-            args = { '${file}', '-v' },
-            console = 'integratedTerminal',
-          },
-        }
-      )
+          type = 'python',
+          request = 'launch',
+          name = 'pytest: current file',
+          module = 'pytest',
+          args = { '${file}', '-v' },
+          console = 'integratedTerminal',
+        },
+      })
     end,
   },
 
@@ -196,17 +194,17 @@ return {
         layouts = {
           {
             elements = {
-              { id = 'scopes', size = 0.25 },
+              { id = 'scopes',      size = 0.25 },
               { id = 'breakpoints', size = 0.25 },
-              { id = 'stacks', size = 0.25 },
-              { id = 'watches', size = 0.25 },
+              { id = 'stacks',      size = 0.25 },
+              { id = 'watches',     size = 0.25 },
             },
             size = 40,
             position = 'left',
           },
           {
             elements = {
-              { id = 'repl', size = 0.5 },
+              { id = 'repl',    size = 0.5 },
               { id = 'console', size = 0.5 },
             },
             size = 10,
