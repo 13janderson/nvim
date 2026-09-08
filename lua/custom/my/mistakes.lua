@@ -9,6 +9,7 @@ local commands = {
 
 local suffixes = {
   '!',
+  '\\',
 }
 
 local function variants(str)
