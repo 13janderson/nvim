@@ -180,10 +180,12 @@ return {
       end)
 
       -- git log --oneline
+
       vim.keymap.set('n', '1Ul', function()
         vim.cmd 'G log --oneline'
       end)
 
+      -- git log --oneline for current file
       vim.keymap.set('n', '1UL', function()
         vim.cmd 'G log --oneline %'
       end)
