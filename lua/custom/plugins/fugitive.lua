@@ -7,8 +7,8 @@ return {
     config = function(_)
       -- Use navigating merge conflict defaults for now [c for previous ]c for next conflict
       -- Set keybindings for resolving merge conflicts
-      vim.keymap.set({ 'n', 'v' }, '<leader>(', ':diffget //2<CR>')
-      vim.keymap.set({ 'n', 'v' }, '<leader>)', ':diffget //3<CR>')
+      vim.keymap.set({ 'n', 'v' }, '<leader>(', 'd2o')
+      vim.keymap.set({ 'n', 'v' }, '<leader>)', 'd3o')
 
       local function fugitive_commit()
         DoOnNewBuffer(function()
@@ -182,6 +182,10 @@ return {
       -- git log --oneline
       vim.keymap.set('n', '1Ul', function()
         vim.cmd 'G log --oneline'
+      end)
+
+      vim.keymap.set('n', '1UL', function()
+        vim.cmd 'G log --oneline %'
       end)
 
       -- git log for current file
