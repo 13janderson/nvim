@@ -57,7 +57,7 @@ return {
         defaults = {
           mappings = {
             i = {
-              ["C-c>"] = "close",
+              ["<C-c>"] = "close",
               ["<C-j>"] = "move_selection_next",
               ["<C-k>"] = "move_selection_previous",
               ["<C-v>"] = select_vertical_right,
@@ -66,6 +66,16 @@ return {
                 require("telescope.actions").close(prompt_bufnr)
                 vim.fn.setreg("+", value)
                 vim.notify(value, nil, { title = "Copied", icon = "󰅍" })
+              end,
+              ["<C-a>"] = function(prompt_bufnr)
+                local entry = require("telescope.actions.state").get_selected_entry()
+                require("telescope.actions").close(prompt_bufnr)
+
+                local path = entry.path or entry.filename or entry.value
+                require("harpoon"):list():add({
+                  value = path,
+                  context = { row = entry.lnum or 1, col = entry.col or 1 },
+                })
               end,
             },
             n = {
