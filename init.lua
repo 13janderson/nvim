@@ -1,7 +1,3 @@
-require 'globals'
-require 'custom.my.ctrl_s_shell'
-require 'custom.my.tabs'
-require 'custom.my.mistakes'
 --[[
 --
 o====================================================================
@@ -25,256 +21,32 @@ o====================================================================
 =====================================================================
 --
 --]]
-
--- Set <space> as the leader key
--- See `:help mapleader`
---  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
-vim.o.winborder = 'rounded'
+require 'globals'
+require 'core.options'
+require 'core.keymaps'
+require 'core.autocmds'
+require 'core.terminal'
+require 'custom.my.ctrl_s_shell'
+require 'custom.my.tabs'
+require 'custom.my.mistakes'
 
--- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = true
-
--- sql omnicomplet nonsense
-vim.cmd [[
-    let g:omni_sql_no_default_maps = 1
-]]
-
--- get file??
--- puts current file into clipboard
-vim.keymap.set('n', 'gl', function()
-  vim.fn.setreg('+', vim.fn.expand '%')
-end)
-
--- Enable ui2 Avoids "Press ENTER" interruptions.
 require('vim._core.ui2').enable {}
-
--- [[ Setting options ]]
--- See `:help vim.opt`
--- NOTE: You can change these options as you wish!
---  For more options, you can see `:help option-list`
--- Relative but normal number for current line
-vim.wo.relativenumber = true
-vim.opt.number = true
--- You can also add relative line numbers, to help with jumping.
---  Experiment for yourself to see if you like it!
-
--- Enable mouse mode, can be useful for resizing splits for example!
-vim.opt.mouse = 'a'
-
--- Don't show the mode, since it's already in the status line
-vim.opt.showmode = false
-
--- Disbale swap files, they are annoying
-vim.opt.swapfile = false
-
--- Enable break indent
-vim.opt.breakindent = true
-
--- Wrap
-vim.opt.wrap = false
-vim.api.nvim_create_autocmd('BufEnter', {
-  desc = 'Turn on linewrap for markdown files',
-  pattern = { '*.md' },
-  group = vim.api.nvim_create_augroup('MarkdownWrapOn', { clear = true }),
-  callback = function()
-    vim.opt.wrap = true
-  end,
-})
---
--- Nicer tabs
-vim.opt.expandtab = true
-vim.opt.shiftwidth = 2
-vim.opt.tabstop = 2
-vim.opt.softtabstop = 2
-vim.opt.autoindent = true
-
--- Format options. Done with Autocmd due to another plugin overriding just setting these once here.
--- This option should work regardless of loading order
-vim.api.nvim_create_autocmd('BufEnter', {
-  desc = 'Override buffer format options',
-  group = vim.api.nvim_create_augroup('override-formatoptions', { clear = true }),
-  callback = function()
-    vim.opt.formatoptions = 'jcrql'
-  end,
-})
-
--- Save undo history
-vim.opt.undofile = true
-
--- Disable command history q:
--- this makes macros and quiting slow
--- vim.keymap.set('n', 'q:', '<NOP>', { noremap = true, silent = true })
-
---
--- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
-vim.opt.ignorecase = true
-vim.opt.smartcase = true
-
--- Keep signcolumn on by default
-vim.opt.signcolumn = 'yes'
-
--- Decrease update time
-vim.opt.updatetime = 250
-
--- Sets how neovim will display certain whitespace characters in the editor.
---  See `:help 'list'`
---  and `:help 'listchars'`
-vim.opt.list = false
-
--- Preview substitutions live, as you type!
-vim.opt.inccommand = 'split'
-
--- Show which line your cursor is on
-vim.opt.cursorline = false
-
--- Minimal number of screen lines to keep above and below the cursor.
-vim.opt.scrolloff = 10
-
--- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
--- instead raise a dialog asking if you wish to save the current file(s)
--- See `:help 'confirm'`
-vim.opt.confirm = false
-
--- Diagnostic keymaps
-vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
-
--- Disable CR keybinding, strange things were happening ngl
-vim.keymap.set('n', '<CR>', '<NOP>', { noremap = true, silent = true })
--- Quickfix list <CR> selection
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = 'qf',
-  callback = function()
-    vim.keymap.set('n', '<CR>', '<CR>', { buffer = true, silent = true })
-  end,
-})
-
--- Quickfix will go to the first quickfix entry automatically. This may not always be a valid quickfix entry.
--- Autocmd goes over all qf entries and goes to the first valid one.
-vim.api.nvim_create_autocmd('QuickFixCmdPost', {
-  callback = function()
-    local qf = vim.fn.getqflist()
-    for i, e in ipairs(qf) do
-      if e.valid ~= nil and e.valid == 1 then
-        local cmd = string.format('cc %d', i)
-        vim.cmd(cmd)
-        return
-      end
-    end
-    -- Otherwise just open quickfix list
-    -- vim.schedule(function() vim.cmd('copen') end)
-  end,
-})
-
-vim.keymap.set('t', '<C-]><C-n>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
-vim.keymap.set('t', '<C-]>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
-
-local last_buffer_cwd = nil
-
-vim.api.nvim_create_autocmd({ 'BufLeave' }, {
-  callback = function()
-    if vim.bo.buftype ~= 'terminal' then
-      last_buffer_cwd = vim.uv.cwd()
-    end
-  end,
-})
-vim.api.nvim_create_autocmd({ 'BufEnter', 'TermEnter', 'TermLeave' }, {
-  desc = 'cd to buffer cwd on enter',
-  callback = function()
-    if vim.bo.buftype == 'terminal' then
-      -- Terminal buffer: use /proc/<pid>/cwd
-      if vim.b.terminal_job_pid == nil then
-        return
-      end
-      local cwd = vim.fn.resolve('/proc/' .. vim.b.terminal_job_pid .. '/cwd')
-      if vim.fn.isdirectory(cwd) == 0 then
-        return
-      end
-      vim.fn.chdir(cwd)
-    else
-      vim.fn.chdir(last_buffer_cwd)
-    end
-  end,
-})
-
--- Primagen keymaps
--- Tmux sessionizer
-vim.keymap.set('n', '<C-f>', '<cmd>silent !tmux neww tmux-sessionizer.sh<CR>')
-vim.keymap.set('n', '<leader>x', ToggleScratch)
-
--- Yank to system clipboard
-vim.keymap.set({ 'n', 'v' }, '<leader>y', [["+y]])
-vim.keymap.set('n', '<leader>Y', 'ggVG"+y<C-O>')
--- vim.keymap.set("n", "<leader>Y", [["+Y]])
-vim.keymap.set('n', '-', ':Oil<CR>')
-vim.keymap.set('n', '<C-d>', '<C-d>zz')
-vim.keymap.set('n', '<C-u>', '<C-u>zz')
-
--- Not sure I like these
--- vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
--- vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
--- vim.keymap.set("n", "[q", "[qzz")
--- vim.keymap.set("n", "]q", "]qzz")
-
-vim.keymap.set('n', 'n', 'nzzzv')
-vim.keymap.set('n', 'N', 'Nzzzv')
--- Paste from buffer but do not overwrite buffer with what we paste over
-vim.keymap.set('x', '<leader>p', [["_dP]])
-
--- Diagnostic errors
--- vim.keymap.set("n", "[dzz", function() vim.diagnostic.jump({ count = 1 }) end)
--- vim.keymap.set("n", "]dzz", function() vim.diagnostic.jump({ count = -1 }) end)
-
--- Alternate between bufffers
--- vim.keymap.set('n', '<leader><leader>', '<C-^>', { noremap = false, silent = true })
-vim.keymap.set('n', '<C-p>', '<C-^>', { noremap = false, silent = true })
-
--- Resizing buffers keymaps
-local r = 10
-vim.keymap.set('n', '<C-W>>', function()
-  vim.api.nvim_win_set_width(0, vim.api.nvim_win_get_width(0) + r)
-end)
-vim.keymap.set('n', '<C-W><', function()
-  vim.api.nvim_win_set_width(0, vim.api.nvim_win_get_width(0) - r)
-end)
-
-vim.api.nvim_set_keymap('c', '<C-j>', '<C-n>', { noremap = false })
-vim.api.nvim_set_keymap('c', '<C-k>', '<C-p>', { noremap = false })
-
--- Map gf to open URLs if it's a link
-vim.keymap.set('n', 'gf', OpenLink, { noremap = true, silent = true })
-
-vim.opt.termguicolors = true
-
--- Highlight when yanking (copying) text
---  Try it with `yap` in normal mode
---  See `:help vim.highlight.on_yank()`
-vim.api.nvim_create_autocmd('TextYankPost', {
-  desc = 'Highlight when yanking (copying) text',
-  group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
-  callback = function()
-    vim.highlight.on_yank()
-  end,
-})
 
 local oil_ex = require 'oil_filexplorer'
 local ex = oil_ex:new()
 
--- Try to make editor more VSCodey, for ease of co-workers
--- this function can be used as a toggle using a global variable vscode
 local function vs_code()
   local vs_code_on = vim.g.vscode or false
   if vs_code_on then
     ex:kill()
     ex = oil_ex:new()
     vim.cmd 'se relativenumber'
-    -- ColourMyPencils()
     vim.g.vscode = false
   else
     ex:up()
-    -- ColourMyPencils("tokionight")
     vim.cmd 'se norelativenumber'
     vim.g.vscode = true
   end
@@ -284,8 +56,6 @@ end
 vim.api.nvim_create_user_command('VSCode', vs_code, {})
 vim.keymap.set('n', '<leader>vs', vs_code, { desc = 'Toggle VSCode display with vs_code function.' })
 
--- [[ Install `lazy.nvim` plugin manager ]]
---    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
   local lazyrepo = 'https://github.com/folke/lazy.nvim.git'
@@ -293,50 +63,7 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
   if vim.v.shell_error ~= 0 then
     error('Error cloning lazy.nvim:\n' .. out)
   end
-end ---@diagnostic disable-next-line: undefined-field
+end
 vim.opt.rtp:prepend(lazypath)
 
--- NOTE: Here is where you install your plugins.
-require('lazy').setup(
-  {
-    -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
-    -- 'tpope/vim-sleuth', -- Detect tabstop and /hiftwidth automatically
-    -- NOTE: Plugins can also be added by using a table,
-    -- with the first argument being the link and the following
-    -- keys can be used to configure plugin behavior/loading/etc.
-    --
-    -- Use `opts = {}` to automatically pass options to a plugin's `setup()` function, forcing the plugin to be loaded.
-    --
-
-    -- Alternatively, use `config = function() ... end` for full control over the configuration.
-    -- If you prefer to call `setup` explicitly, use:
-    --
-    {
-      import = 'custom/plugins',
-    },
-    -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
-    --
-    -- This is often very useful to both group configuration, as well as handle
-    -- lazy loading plugins that don't need to be loaded immediately at startup.
-    --
-    -- For example, in the following configuration, we use:
-    --  event = 'VimEnter'
-    --
-    -- Then, because we use the `opts` key (recommended), the configuration runs
-    -- after the plugin has been loaded as `require(MODULE).setup(opts)`.
-
-    -- NOTE: Plugins can specify dependencies.
-    --
-    -- The dependencies are proper plugin specifications as well - anything
-    -- you do for a plugin at the top level, you can do for a dependency.
-    --
-    -- Use the `dependencies` key to specify the dependencies of a particular plugin
-  },
-  -- Additional opts
-  {
-    change_detection = {
-      enabled = true,
-      notify = false,
-    },
-  }
-)
+require('lazy').setup({ { import = 'custom/plugins' } }, { change_detection = { enabled = true, notify = false } })

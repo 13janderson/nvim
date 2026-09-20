@@ -2,6 +2,15 @@ return {
   {
     'nvim-treesitter/nvim-treesitter-context',
     config = function()
+      local move = require 'nvim-treesitter-textobjects.move'
+
+      vim.keymap.set({ 'n', 'x', 'o' }, ']f', function()
+        move.goto_next_start '@function.outer'
+      end, { desc = 'Next function start' })
+      vim.keymap.set({ 'n', 'x', 'o' }, '[f', function()
+        move.goto_previous_start '@function.outer'
+      end, { desc = 'Previous function start' })
+
       vim.keymap.set('n', 'g{', function()
         require('treesitter-context').go_to_context(vim.v.count1)
       end, { silent = true })
