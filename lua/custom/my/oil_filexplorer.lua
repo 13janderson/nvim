@@ -110,4 +110,25 @@ function OilFileEx:kill()
   self.killed = true
 end
 
+-- local oil_ex = require 'oil_filexplorer'
+local ex = OilFileEx:new()
+
+local function vs_code()
+  local vs_code_on = vim.g.vscode or false
+  if vs_code_on then
+    ex:kill()
+    ex = OilFileEx:new()
+    vim.cmd 'se relativenumber'
+    vim.g.vscode = false
+  else
+    ex:up()
+    vim.cmd 'se norelativenumber'
+    vim.g.vscode = true
+  end
+  ColourMyLines()
+end
+
+vim.api.nvim_create_user_command('VSCode', vs_code, {})
+vim.keymap.set('n', '<leader>vs', vs_code, { desc = 'Toggle VSCode display with vs_code function.' })
+
 return OilFileEx

@@ -32,29 +32,10 @@ require 'core.terminal'
 require 'custom.my.ctrl_s_shell'
 require 'custom.my.tabs'
 require 'custom.my.mistakes'
+require 'custom.my.mistakes'
+require 'custom.my.oil_filexplorer'
 
 require('vim._core.ui2').enable {}
-
-local oil_ex = require 'oil_filexplorer'
-local ex = oil_ex:new()
-
-local function vs_code()
-  local vs_code_on = vim.g.vscode or false
-  if vs_code_on then
-    ex:kill()
-    ex = oil_ex:new()
-    vim.cmd 'se relativenumber'
-    vim.g.vscode = false
-  else
-    ex:up()
-    vim.cmd 'se norelativenumber'
-    vim.g.vscode = true
-  end
-  ColourMyLines()
-end
-
-vim.api.nvim_create_user_command('VSCode', vs_code, {})
-vim.keymap.set('n', '<leader>vs', vs_code, { desc = 'Toggle VSCode display with vs_code function.' })
 
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
