@@ -1,3 +1,74 @@
+local function git_lines(args)
+  local lines = vim.fn.systemlist(vim.list_extend({ 'git' }, args))
+  if vim.v.shell_error ~= 0 then
+    return nil
+  end
+  return lines
+end
+
+local default_branch_cache = {}
+
+local function default_branch(repo_root)
+  if default_branch_cache[repo_root] then
+    return default_branch_cache[repo_root]
+  end
+
+  local remotes = git_lines { 'remote' }
+  if not remotes or #remotes == 0 then
+    return nil
+  end
+
+  -- Clones normally retain this local symbolic ref, avoiding a network call.
+  for _, remote in ipairs(remotes) do
+    local head = git_lines { 'symbolic-ref', '--quiet', '--short', 'refs/remotes/' .. remote .. '/HEAD' }
+    if head and head[1] then
+      local branch = head[1]:match '^[^/]+/(.+)$' or head[1]
+      default_branch_cache[repo_root] = branch
+      return branch
+    end
+  end
+
+  -- Fall back to Git's cached remote metadata for repositories without the ref.
+  for _, remote in ipairs(remotes) do
+    local details = git_lines { 'remote', 'show', '-n', remote }
+    if details then
+      for _, line in ipairs(details) do
+        local branch = line:match '^%s*HEAD branch:%s*(.+)%s*$'
+        if branch and branch ~= '(unknown)' then
+          default_branch_cache[repo_root] = branch
+          return branch
+        end
+      end
+    end
+  end
+
+  return nil
+end
+
+local function guarded_push(command)
+  local branch = git_lines { 'branch', '--show-current' }
+  local current_branch = branch and branch[1]
+  local root = git_lines { 'rev-parse', '--show-toplevel' }
+  local protected_branch = root and root[1] and default_branch(root[1])
+
+  if not current_branch or current_branch == '' then
+    vim.notify('Unable to determine the current Git branch; push cancelled.', vim.log.levels.ERROR)
+    return
+  end
+
+  if not protected_branch then
+    vim.notify('Unable to determine the repository default branch; push cancelled.', vim.log.levels.ERROR)
+    return
+  end
+
+  if current_branch == protected_branch then
+    vim.notify('Push cancelled: pushing directly to ' .. protected_branch .. ' is disabled.', vim.log.levels.WARN)
+    return
+  end
+
+  vim.cmd('G ' .. (command or 'push'))
+end
+
 return {
   {
     'tpope/vim-fugitive',
@@ -26,7 +97,7 @@ return {
           pattern = 'COMMIT_EDITMSG',
           callback = function()
             vim.schedule(function()
-              vim.cmd 'G push'
+              guarded_push()
             end)
           end,
           once = true,
@@ -202,7 +273,7 @@ return {
       -- keymap overrides
       vim.keymap.set('n', '<c-p>', '<c-^>', { noremap = false, silent = true })
       local push = function()
-        vim.cmd 'G push --no-verify'
+        guarded_push 'push --no-verify'
       end
 
       local pull = function()
