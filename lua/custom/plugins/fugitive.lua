@@ -6,13 +6,7 @@ local function git_lines(args)
   return lines
 end
 
-local default_branch_cache = {}
-
-local function default_branch(repo_root)
-  if default_branch_cache[repo_root] then
-    return default_branch_cache[repo_root]
-  end
-
+local function default_branch()
   local remotes = git_lines { 'remote' }
   if not remotes or #remotes == 0 then
     return nil
@@ -22,9 +16,7 @@ local function default_branch(repo_root)
   for _, remote in ipairs(remotes) do
     local head = git_lines { 'symbolic-ref', '--quiet', '--short', 'refs/remotes/' .. remote .. '/HEAD' }
     if head and head[1] then
-      local branch = head[1]:match '^[^/]+/(.+)$' or head[1]
-      default_branch_cache[repo_root] = branch
-      return branch
+      return head[1]:match '^[^/]+/(.+)$' or head[1]
     end
   end
 
@@ -35,7 +27,6 @@ local function default_branch(repo_root)
       for _, line in ipairs(details) do
         local branch = line:match '^%s*HEAD branch:%s*(.+)%s*$'
         if branch and branch ~= '(unknown)' then
-          default_branch_cache[repo_root] = branch
           return branch
         end
       end
@@ -48,8 +39,7 @@ end
 local function guarded_push(command)
   local branch = git_lines { 'branch', '--show-current' }
   local current_branch = branch and branch[1]
-  local root = git_lines { 'rev-parse', '--show-toplevel' }
-  local protected_branch = root and root[1] and default_branch(root[1])
+  local protected_branch = default_branch()
 
   if not current_branch or current_branch == '' then
     vim.notify('Unable to determine the current Git branch; push cancelled.', vim.log.levels.ERROR)
