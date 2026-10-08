@@ -127,6 +127,8 @@ return {
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader>sm', builtin.marks, { desc = '[S]earch [M]arks' })
       vim.keymap.set('n', '<leader>sp', builtin.spell_suggest, { desc = '[S]earch S[p]ell' })
+      vim.keymap.set('n', '<leader>su', builtin.buffers, { desc = '[S]earch B[u]ffers' })
+      vim.keymap.set('n', '<leader>sb', builtin.git_branches, { desc = '[S]earch [B]ranches' })
 
 
       -- Quickfix telescope pass through
