@@ -233,11 +233,7 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
       anchor_by_pwd[pwd] = { winid = prev_win, tabpage = prev_tab, bufnr = prev_buf }
     end
 
-    if new_tab then
-      vim.cmd 'tabnew'
-    else
-      vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
-    end
+    vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
     vim.api.nvim_set_current_buf(b)
     vim.bo.buflisted = false
 
@@ -311,12 +307,10 @@ local function ctrl_toggle(cnt, here, dict, cmd, terminal_close_key, other_visib
     end
   else
     -- Create a new terminal for this pwd.
-    if not here then
-      if new_tab then
-        vim.cmd 'tabnew'
-      else
-        vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
-      end
+    if new_tab then
+      vim.cmd 'tabnew'
+    elseif not here then
+      vim.cmd(force_vsplit and 'rightbelow vsplit' or split_cmd(cnt, other_visible))
     end
 
     if cmd and cmd ~= '' then
@@ -410,11 +404,11 @@ vim.keymap.set('n', "'<C-g>", function()
   M.ctrl_g(vim.v.count, true)
 end, { remap = false })
 
-vim.keymap.set('n', '<C-t>', function()
+vim.keymap.set('n', 'D', function()
   M.ctrl_t(vim.v.count, false)
 end, { remap = false })
 
-vim.keymap.set('n', "'<C-t>", function()
+vim.keymap.set('n', "'D", function()
   M.ctrl_t(vim.v.count, true)
 end, { remap = false })
 
