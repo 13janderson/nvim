@@ -57,38 +57,42 @@ return {
         defaults = {
           mappings = {
             i = {
-              ["<C-c>"] = "close",
-              ["<C-j>"] = "move_selection_next",
-              ["<C-k>"] = "move_selection_previous",
-              ["<C-v>"] = select_vertical_right,
-              ["<C-y>"] = function(prompt_bufnr)
-                local value = require("telescope.actions.state").get_selected_entry().value
-                require("telescope.actions").close(prompt_bufnr)
-                vim.fn.setreg("+", value)
-                vim.notify(value, nil, { title = "Copied", icon = "󰅍" })
+              ['<C-c>'] = 'close',
+              ['<C-j>'] = 'move_selection_next',
+              ['<C-k>'] = 'move_selection_previous',
+              ['<C-v>'] = select_vertical_right,
+              ['<C-y>'] = function(prompt_bufnr)
+                local value = require('telescope.actions.state').get_selected_entry().value
+                require('telescope.actions').close(prompt_bufnr)
+                vim.fn.setreg('+', value)
+                vim.notify(value, nil, { title = 'Copied', icon = '󰅍' })
               end,
-              ["<C-a>"] = function(prompt_bufnr)
-                local entry = require("telescope.actions.state").get_selected_entry()
-                require("telescope.actions").close(prompt_bufnr)
+              ['<C-a>'] = function(prompt_bufnr)
+                local entry = require('telescope.actions.state').get_selected_entry()
+                require('telescope.actions').close(prompt_bufnr)
 
                 local path = entry.path or entry.filename or entry.value
-                require("harpoon"):list():add({
+                require('harpoon'):list():add {
                   value = path,
                   context = { row = entry.lnum or 1, col = entry.col or 1 },
-                })
+                }
               end,
             },
             n = {
-              ["<C-v>"] = select_vertical_right,
+              ['<C-v>'] = select_vertical_right,
             },
           },
           file_ignore_patterns = {
-            "%.git/",                   -- ignore .git folder
-            "node_modules/",            -- ignore node_modules
-            "%.lock",                   -- ignore lock files
-            "%.jpg", "%.png", "%.jpeg", -- ignore image files
-            "%.exe", "%.dll",           -- ignore binary files
-            "build/", "dist/",          -- ignore build folders
+            '%.git/', -- ignore .git folder
+            'node_modules/', -- ignore node_modules
+            '%.lock', -- ignore lock files
+            '%.jpg',
+            '%.png',
+            '%.jpeg', -- ignore image files
+            '%.exe',
+            '%.dll', -- ignore binary files
+            'build/',
+            'dist/', -- ignore build folders
           },
         },
         pickers = {
@@ -108,6 +112,83 @@ return {
         },
       }
 
+      local pickers = require 'telescope.pickers'
+      local finders = require 'telescope.finders'
+      local make_entry = require 'telescope.make_entry'
+      local conf = require('telescope.config').values
+
+      local live_multigrep = function(opts)
+        opts = opts or {}
+        opts.cwd = opts.cwd or vim.uv.cwd()
+
+        local finder = finders.new_async_job {
+          command_generator = function(prompt)
+            if not prompt or prompt == '' then
+              return nil
+            end
+
+            -- Split prompt by double spaces
+            local pieces = vim.split(prompt, '  ', { plain = true })
+            local args = { 'rg' }
+            PrintPrefix("pieces", pieces)
+
+            if pieces[1] then
+              table.insert(args, '-e')
+              table.insert(args, pieces[1])
+            end
+
+            if pieces[2] then
+              table.insert(args, '-g')
+              table.insert(args, pieces[2])
+            end
+            local exact = vim.tbl_flatten {
+              args,
+              { '--color=never', '--no-heading', '--with-filename', '--line-number', '--column', '--smart-case' },
+            }
+
+            if not pieces[2] then
+              return exact
+            end
+
+            local glob = vim.trim(pieces[2])
+            if glob:find('*', 1, true) or glob:find('?', 1, true) or glob:find('[', 1, true) then
+              return exact
+            end
+
+            -- Try a literal filename first, then a prefix glob only if the
+            -- literal search has no matches.
+            local fallback = vim.deepcopy(exact)
+            for index, value in ipairs(fallback) do
+              if value == glob then
+                fallback[index] = glob .. '*'
+                break
+              end
+            end
+
+            local quote = function(value)
+              return vim.fn.shellescape(value)
+            end
+            local command = function(command_args)
+              return table.concat(vim.tbl_map(quote, command_args), ' ')
+            end
+            local script = 'if ' .. command(exact) .. '; then exit 0; fi; status=$?; if [ "$status" -eq 1 ]; then ' .. command(fallback) .. '; exit $?; fi; exit "$status"'
+            return { 'sh', '-c', script }
+          end,
+          entry_maker = make_entry.gen_from_vimgrep(opts),
+          cwd = opts.cwd,
+        }
+
+        pickers
+          .new(opts, {
+            debounce = 100,
+            prompt_title = 'Multi Grep',
+            finder = finder,
+            previewer = conf.grep_previewer(opts),
+            sorter = require('telescope.sorters').empty(),
+          })
+          :find()
+      end
+
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')
@@ -120,7 +201,7 @@ return {
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
-      vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
+      vim.keymap.set('n', '<leader>sg', live_multigrep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>s/', builtin.current_buffer_fuzzy_find, { desc = '[S]earch [/]' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
@@ -128,22 +209,21 @@ return {
       vim.keymap.set('n', '<leader>sm', builtin.marks, { desc = '[S]earch [M]arks' })
       vim.keymap.set('n', '<leader>sp', builtin.spell_suggest, { desc = '[S]earch S[p]ell' })
 
-
       -- Quickfix telescope pass through
       -- Send picker entries to quickfix if in telescope picker, otherwise toggle quickfix. Super nice
       local function toggle_qf()
         for _, win in ipairs(vim.fn.getwininfo()) do
           if win.quickfix == 1 then
-            vim.cmd("cclose")
+            vim.cmd 'cclose'
             return
           end
         end
-        vim.cmd("copen")
+        vim.cmd 'copen'
       end
 
       local cq_passthrough = function()
-        local req_act, actions = pcall(require, "telescope.actions")
-        local req_state, actions_state = pcall(require, "telescope.actions.state")
+        local req_act, actions = pcall(require, 'telescope.actions')
+        local req_state, actions_state = pcall(require, 'telescope.actions.state')
         if req_act and req_state and actions_state.get_current_picker(vim.api.nvim_get_current_buf()) then
           -- local ok, builtin = pcall(require, "telescope.builtin")
           actions.send_to_qflist()
@@ -153,10 +233,10 @@ return {
       end
       vim.keymap.set('n', '<C-Q>', cq_passthrough, { desc = 'Quickfix Passthrough to telescope or toggle' })
 
-      vim.api.nvim_create_user_command("TelescopeColors", function()
-        builtin.colorscheme({
+      vim.api.nvim_create_user_command('TelescopeColors', function()
+        builtin.colorscheme {
           enable_preview = true,
-        })
+        }
       end, {})
 
       -- Slightly advanced example of overriding default behavior and theme
