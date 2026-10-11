@@ -30,6 +30,6 @@ vim.opt.confirm = false
 vim.opt.termguicolors = true
 
 -- Treesitter supplies the fold expression; keep folds open until explicitly closed.
-vim.opt.foldmethod = 'expr'
-vim.opt.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
-vim.opt.foldlevel = 99
+-- vim.opt.foldmethod = 'expr'
+-- vim.opt.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+-- vim.opt.foldlevel = 99
