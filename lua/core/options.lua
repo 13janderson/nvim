@@ -21,6 +21,7 @@ vim.opt.undofile = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.signcolumn = 'yes'
+vim.opt.splitright = true
 vim.opt.updatetime = 250
 vim.opt.list = false
 vim.opt.inccommand = 'split'

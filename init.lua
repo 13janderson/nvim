@@ -34,6 +34,7 @@ require 'custom.my.tabs'
 require 'custom.my.mistakes'
 require 'custom.my.mistakes'
 require 'custom.my.oil_filexplorer'
+require 'custom.my.split_new_buffer'
 
 require('vim._core.ui2').enable {}
 
