@@ -72,18 +72,19 @@ return {
     local obsidian = require 'obsidian'
     obsidian.setup(opts)
 
-    local ok, err = pcall(function()
-      vim.system({ 'obsidian' }, { detach = true }, function(obj)
-        if obj.code ~= 0 then
-          vim.schedule(function()
-            vim.notify('Obsidian exited with code ' .. obj.code .. ': ' .. (obj.stderr or ''), vim.log.levels.WARN)
-          end)
-        end
-      end)
-    end)
-    if not ok then
-      vim.notify('Failed to start Obsidian: ' .. tostring(err), vim.log.levels.WARN)
-    end
+    -- Broken for some reason - not detached
+    -- local ok, err = pcall(function()
+    --   vim.system({ 'obsidian' }, { detach = true }, function(obj)
+    --     if obj.code ~= 0 then
+    --       vim.schedule(function()
+    --         vim.notify('Obsidian exited with code ' .. obj.code .. ': ' .. (obj.stderr or ''), vim.log.levels.WARN)
+    --       end)
+    --     end
+    --   end)
+    -- end)
+    -- if not ok then
+    --   vim.notify('Failed to start Obsidian: ' .. tostring(err), vim.log.levels.WARN)
+    -- end
 
     vim.keymap.set('n', 'gf', obsidian.util.gf_passthrough)
     vim.keymap.set('n', '<M-x>', obsidian.util.toggle_checkbox)
