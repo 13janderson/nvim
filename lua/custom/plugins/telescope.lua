@@ -83,16 +83,16 @@ return {
             },
           },
           file_ignore_patterns = {
-            '%.git/', -- ignore .git folder
+            '%.git/',        -- ignore .git folder
             'node_modules/', -- ignore node_modules
-            '%.lock', -- ignore lock files
+            '%.lock',        -- ignore lock files
             '%.jpg',
             '%.png',
             '%.jpeg', -- ignore image files
             '%.exe',
-            '%.dll', -- ignore binary files
+            '%.dll',  -- ignore binary files
             'build/',
-            'dist/', -- ignore build folders
+            'dist/',  -- ignore build folders
           },
         },
         pickers = {
@@ -130,7 +130,7 @@ return {
             -- Split prompt by double spaces
             local pieces = vim.split(prompt, '  ', { plain = true })
             local args = { 'rg' }
-            PrintPrefix("pieces", pieces)
+            PrintPrefix('pieces', pieces)
 
             if pieces[1] then
               table.insert(args, '-e')
@@ -171,7 +171,11 @@ return {
             local command = function(command_args)
               return table.concat(vim.tbl_map(quote, command_args), ' ')
             end
-            local script = 'if ' .. command(exact) .. '; then exit 0; fi; status=$?; if [ "$status" -eq 1 ]; then ' .. command(fallback) .. '; exit $?; fi; exit "$status"'
+            local script = 'if '
+                .. command(exact)
+                .. '; then exit 0; fi; status=$?; if [ "$status" -eq 1 ]; then '
+                .. command(fallback)
+                .. '; exit $?; fi; exit "$status"'
             return { 'sh', '-c', script }
           end,
           entry_maker = make_entry.gen_from_vimgrep(opts),
@@ -179,14 +183,14 @@ return {
         }
 
         pickers
-          .new(opts, {
-            debounce = 100,
-            prompt_title = 'Multi Grep',
-            finder = finder,
-            previewer = conf.grep_previewer(opts),
-            sorter = require('telescope.sorters').empty(),
-          })
-          :find()
+            .new(opts, {
+              debounce = 100,
+              prompt_title = 'Multi Grep',
+              finder = finder,
+              previewer = conf.grep_previewer(opts),
+              sorter = require('telescope.sorters').empty(),
+            })
+            :find()
       end
 
       -- Enable Telescope extensions if they are installed
@@ -256,6 +260,31 @@ return {
       vim.keymap.set('n', '<leader>sn', function()
         builtin.find_files { cwd = vim.fn.stdpath 'config' }
       end, { desc = '[S]earch [N]eovim files' })
+    end,
+  },
+  {
+    'rafi/telescope-thesaurus.nvim',
+    dependencies = {
+      'nvim-telescope/telescope.nvim',
+    },
+    config = function()
+      vim.g.thesaurus = {
+        provider = 'dictionaryapi',                       -- default: 'dictionaryapi'
+        picker = 'telescope',                             -- default: 'auto', snacks if installed, else telescope
+        -- Fine to commit this tbh, it's a free API.
+        api_key = '91a26400-a3ef-4013-824b-068b62c22e7b', -- dictionaryapi.com key, default: $DICTIONARY_API_KEY
+        loading = true,                                   -- show a "Loading..." popup during a lookup
+      }
+      vim.keymap.set('n', '<leader>zl', function()
+        require('thesaurus').lookup {
+          layout_strategy = 'cursor',
+          layout_config = {
+            width = 0.8,
+            height = 0.7,
+            prompt_position = 'top',
+          },
+        }
+      end, { desc = 'Thesaurus lookup' })
     end,
   },
 }
