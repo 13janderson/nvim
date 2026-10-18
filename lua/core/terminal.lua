@@ -1,4 +1,5 @@
 local last_buffer_cwd = nil
+local root_dir = vim.fs.normalize(vim.uv.cwd())
 
 vim.api.nvim_create_autocmd('BufLeave', {
   callback = function()
@@ -19,6 +20,14 @@ vim.api.nvim_create_autocmd({ 'BufEnter', 'TermEnter', 'TermLeave' }, {
       if vim.fn.isdirectory(cwd) == 0 then
         return
       end
+
+      -- Skip dirs nested inside the directory Neovim was started in.
+      for parent in vim.fs.parents(cwd) do
+        if parent == root_dir then
+          return
+        end
+      end
+
       vim.fn.chdir(cwd)
     elseif last_buffer_cwd then
       vim.fn.chdir(last_buffer_cwd)
