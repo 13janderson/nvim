@@ -205,7 +205,8 @@ return {
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
-      vim.keymap.set('n', '<leader>sg', live_multigrep, { desc = '[S]earch by [G]rep' })
+      -- vim.keymap.set('n', '<leader>sg', live_multigrep, { desc = '[S]earch by [G]rep' })
+      vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>s/', builtin.current_buffer_fuzzy_find, { desc = '[S]earch [/]' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
@@ -275,12 +276,12 @@ return {
         api_key = '91a26400-a3ef-4013-824b-068b62c22e7b', -- dictionaryapi.com key, default: $DICTIONARY_API_KEY
         loading = true,                                   -- show a "Loading..." popup during a lookup
       }
-      vim.keymap.set('n', '<leader>zl', function()
+      vim.keymap.set('n', 'zl', function()
         require('thesaurus').lookup {
           layout_strategy = 'cursor',
           layout_config = {
-            width = 0.8,
-            height = 0.7,
+            width = 0.6,
+            height = 0.5,
             prompt_position = 'top',
           },
         }
