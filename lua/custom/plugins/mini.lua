@@ -118,6 +118,13 @@ return {
         return ' @' .. recording
       end
 
+      local function section_wordcount()
+        if vim.bo.filetype ~= 'markdown' then
+          return ''
+        end
+        return '󰈭 ' .. vim.fn.wordcount().words .. ' words'
+      end
+
       local function section_vault()
         if vim.startswith(vim.fn.getcwd(), vim.fn.expand '~/vault') then
           return '󰠮 vault'
@@ -149,6 +156,7 @@ return {
             local lsp = section_lsp()
             local filename = statusline.section_filename { trunc_width = 140 }
             local fileinfo = statusline.section_fileinfo { trunc_width = 120 }
+            local wordcount = section_wordcount()
             local location = statusline.section_location {}
             local terminal = section_terminal()
             local harpoon = section_harpoon()
@@ -163,7 +171,7 @@ return {
               { hl = 'MiniStatuslineFilename', strings = { filename } },
               '%=',
               { hl = 'MiniStatuslineDevinfo', strings = { diagnostics, lsp, harpoon } },
-              { hl = 'MiniStatuslineFileinfo', strings = { fileinfo } },
+              { hl = 'MiniStatuslineFileinfo', strings = { fileinfo, wordcount } },
               { hl = mode_hl, strings = { location } },
             }
           end,
