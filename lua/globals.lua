@@ -95,12 +95,70 @@ function _G.OpenLink()
   end
 end
 
+local SCRATCH_NAME = "__scratch__"
+local SCRATCH_MIN_HEIGHT = 5
+local SCRATCH_MAX_HEIGHT = 15
+local SCRATCH_BOTTOM_PADDING = 2
+
+local function scratch_height(bufnr)
+  local lines = vim.api.nvim_buf_line_count(bufnr)
+  local height = lines
+  if lines >= SCRATCH_MIN_HEIGHT then
+    height = height + SCRATCH_BOTTOM_PADDING
+  end
+  height = math.max(SCRATCH_MIN_HEIGHT, math.min(SCRATCH_MAX_HEIGHT, height))
+  local available = math.max(1, vim.o.lines - vim.o.cmdheight - 2)
+  return math.min(height, available)
+end
+
+local function resize_scratch(bufnr)
+  local height = scratch_height(bufnr)
+  for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
+    if vim.api.nvim_win_get_height(win) ~= height then
+      pcall(vim.api.nvim_win_set_height, win, height)
+    end
+  end
+end
+
+vim.api.nvim_create_autocmd({ 'ExitPre', 'VimLeavePre' }, {
+  group = vim.api.nvim_create_augroup('ScratchAutosave', { clear = true }),
+  callback = function(args)
+    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_get_name(buf):match(SCRATCH_NAME .. '$') then
+        if vim.bo[buf].modified then
+          vim.api.nvim_buf_call(buf, function()
+            vim.cmd 'silent! write'
+          end)
+        end
+        if args.event == 'VimLeavePre' then
+          pcall(vim.api.nvim_buf_delete, buf, { force = true })
+        end
+      end
+    end
+  end,
+})
+
+local function setup_scratch_resize(bufnr)
+  if vim.b[bufnr].scratch_resize_autocmd then
+    return
+  end
+  vim.b[bufnr].scratch_resize_autocmd = true
+  vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI', 'TextChangedP', 'InsertLeave' }, {
+    buffer = bufnr,
+    callback = function()
+      vim.schedule(function()
+        resize_scratch(bufnr)
+      end)
+    end,
+  })
+end
+
 function _G.ToggleScratch()
-  local scratch_name = "__scratch__"
+  local scratch_path = vim.fn.fnamemodify(SCRATCH_NAME, ':p')
   local existing_bufnr = nil
 
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_get_name(buf):match(scratch_name .. "$") then
+    if vim.api.nvim_buf_get_name(buf):match(SCRATCH_NAME .. "$") then
       existing_bufnr = buf
       break
     end
@@ -113,17 +171,26 @@ function _G.ToggleScratch()
     end
   end
 
-  local bufnr = existing_bufnr or vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_name(bufnr, scratch_name)
+  local bufnr = existing_bufnr or vim.fn.bufadd(scratch_path)
+  vim.fn.bufload(bufnr)
+  vim.bo[bufnr].buftype = ''
+  vim.bo[bufnr].swapfile = false
+  vim.bo[bufnr].buflisted = false
+  vim.bo[bufnr].bufhidden = 'hide'
+  setup_scratch_resize(bufnr)
+
+  local height = scratch_height(bufnr)
   local winnr = 0
 
   if vim.api.nvim_buf_get_name(0) ~= "" then
     winnr = vim.api.nvim_open_win(bufnr, false, {
       split = 'above',
-      win = 0
+      win = 0,
+      height = height,
     })
   else
     vim.api.nvim_set_current_buf(bufnr)
+    resize_scratch(bufnr)
   end
 
   vim.api.nvim_set_current_win(winnr)
