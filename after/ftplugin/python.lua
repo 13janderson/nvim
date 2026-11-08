@@ -27,7 +27,3 @@ errorformat = errorformat .. ',%Z  %m'
 
 vim.api.nvim_set_option_value("errorformat", errorformat, opts_local_scope)
 vim.api.nvim_set_option_value('makeprg', 'python -t -u', opts_local_scope)
-
-vim.keymap.set('n', '<leader>dt', function()
-  require('dap-python').test_method()
-end, { buffer = true, desc = 'DAP: Debug nearest Python test' })
