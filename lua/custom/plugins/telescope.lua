@@ -193,6 +193,92 @@ return {
             :find()
       end
 
+      local markdown_headings = function(opts)
+        opts = opts or {}
+
+        if vim.bo.filetype ~= 'markdown' then
+          vim.notify('Markdown headings are only available in Markdown buffers', vim.log.levels.WARN)
+          return
+        end
+
+        local bufnr = vim.api.nvim_get_current_buf()
+        local ok, parser = pcall(vim.treesitter.get_parser, bufnr, 'markdown')
+        if not ok or not parser then
+          vim.notify('No markdown tree-sitter parser available', vim.log.levels.ERROR)
+          return
+        end
+
+        local ok_query, query = pcall(vim.treesitter.query.parse, 'markdown', [[
+          (atx_heading) @heading
+          (setext_heading) @heading
+        ]])
+        if not ok_query or not query then
+          vim.notify('Failed to load markdown heading query', vim.log.levels.ERROR)
+          return
+        end
+
+        local root = parser:parse()[1]:root()
+        local headings = {}
+
+        for _, node in query:iter_captures(root, bufnr) do
+          local level
+          for child in node:iter_children() do
+            local child_type = child:type()
+            level = tonumber(child_type:match '^atx_h(%d)_marker$' or child_type:match '^setext_h(%d)_underline$')
+            if level then
+              break
+            end
+          end
+
+          local content = node:field('heading_content')[1]
+          local text = content and vim.treesitter.get_node_text(content, bufnr)
+              or vim.treesitter.get_node_text(node, bufnr)
+          text = vim.trim(text)
+          if node:type() == 'atx_heading' then
+            text = text:gsub('%s*#+%s*$', '')
+          end
+
+          if text ~= '' then
+            table.insert(headings, {
+              level = level or 1,
+              text = text,
+              lnum = select(1, node:range()) + 1,
+              filename = vim.api.nvim_buf_get_name(bufnr),
+              bufnr = bufnr,
+            })
+          end
+        end
+
+        if #headings == 0 then
+          vim.notify('No markdown headings found', vim.log.levels.INFO)
+          return
+        end
+
+        pickers.new(opts, {
+          prompt_title = 'Markdown Headings',
+          finder = finders.new_table {
+            results = headings,
+            entry_maker = function(entry)
+              return {
+                value = entry,
+                display = string.rep('  ', entry.level - 1) .. entry.text,
+                ordinal = entry.text,
+                lnum = entry.lnum,
+                col = 1,
+                filename = entry.filename,
+                bufnr = entry.bufnr,
+              }
+            end,
+          },
+          previewer = conf.grep_previewer(opts),
+          sorter = conf.generic_sorter(opts),
+        }):find()
+      end
+
+      vim.api.nvim_create_user_command('MarkdownHeadings', function()
+        markdown_headings {}
+      end, {})
+
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')
@@ -208,7 +294,13 @@ return {
       vim.keymap.set('n', '<leader>sG', live_multigrep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>s/', builtin.current_buffer_fuzzy_find, { desc = '[S]earch [/]' })
-      vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
+      vim.keymap.set('n', '<leader>sd', function()
+        if vim.bo.filetype == 'markdown' then
+          markdown_headings {}
+          return
+        end
+        builtin.diagnostics()
+      end, { desc = '[S]earch Markdown [D]headings or [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader>sm', builtin.marks, { desc = '[S]earch [M]arks' })
