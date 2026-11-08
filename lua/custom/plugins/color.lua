@@ -1,17 +1,15 @@
 ---@param colour "rosepine" | "tokionight" | "onedark" | "catppuccin" | "oxocarbon" | "everforest" | nil
 function ColourMyPencils(colour)
   -- TODO refactor this shite, wrap setting colour in pcall maybe?
-  if colour == "rosepine" then
+  if colour == 'rosepine' then
     vim.cmd.colorscheme 'rose-pine-moon'
-  elseif colour == "tokionight" then
+  elseif colour == 'tokionight' then
     vim.cmd.colorscheme 'tokyonight-storm'
-  elseif colour == "onedark" then
+  elseif colour == 'onedark' then
     vim.cmd.colorscheme 'onedark'
-  elseif colour == "catppuccin" then
+  elseif colour == 'catppuccin' then
     vim.cmd.colorscheme 'catppuccin'
-  elseif colour == "oxocarbon" then
-    vim.cmd.colorscheme 'oxocarbon'
-  elseif colour == "everforest" then
+  elseif colour == 'everforest' then
     vim.cmd.colorscheme 'everforest'
   else
     -- Default
@@ -32,10 +30,10 @@ function ColourMyLines()
       ]]
 end
 
-vim.api.nvim_create_autocmd({ "BufEnter" }, {
-  pattern = "*",
+vim.api.nvim_create_autocmd({ 'BufEnter' }, {
+  pattern = '*',
   group = vim.api.nvim_create_augroup('LineColors', { clear = true }),
-  callback = ColourMyLines
+  callback = ColourMyLines,
 })
 
 local rosepine = { -- You can easily change to a different colorscheme.
@@ -54,7 +52,7 @@ local rosepine = { -- You can easily change to a different colorscheme.
         bold = false,
       },
     }
-    ColourMyPencils("rosepine")
+    ColourMyPencils 'rosepine'
   end,
 }
 
@@ -92,41 +90,32 @@ local onedark = {
 }
 
 local catppuccin = {
-  "catppuccin/nvim",
-  name = "catppuccin",
+  'catppuccin/nvim',
+  name = 'catppuccin',
   lazy = false,
   priority = 1000,
   config = function()
-    require("catppuccin").setup({
-      flavour = "frappe", -- or "latte", "frappe", "macchiato"
+    require('catppuccin').setup {
+      flavour = 'frappe', -- or "latte", "frappe", "macchiato"
       transparent_background = true,
-    })
+    }
   end,
-}
-
-local oxocarbon = {
-  "nyoom-engineering/oxocarbon.nvim",
-  lazy = false,
-  priority = 1000,
-  transparent_background = true,
 }
 
 local everforest = {
-  "sainnhe/everforest",
+  'sainnhe/everforest',
   lazy = false,
   priority = 1000,
   config = function()
-    vim.g.everforest_background = "soft" -- "soft" "medium", "hard"
+    vim.g.everforest_background = 'soft' -- "soft" "medium", "hard"
     vim.g.everforest_transparent_background = true
   end,
 }
-
 
 return {
   rosepine,
   tokionight,
   onedark,
   catppuccin,
-  oxocarbon,
   everforest,
 }
