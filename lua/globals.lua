@@ -95,7 +95,7 @@ function _G.OpenLink()
   end
 end
 
-local SCRATCH_NAME = "__scratch__"
+local SCRATCH_NAME = "scratch.md"
 local SCRATCH_MIN_HEIGHT = 5
 local SCRATCH_MAX_HEIGHT = 15
 local SCRATCH_BOTTOM_PADDING = 2
@@ -191,6 +191,7 @@ function _G.ToggleScratch()
   vim.bo[bufnr].swapfile = false
   vim.bo[bufnr].buflisted = false
   vim.bo[bufnr].bufhidden = 'hide'
+  vim.bo[bufnr].filetype = 'markdown'
   setup_scratch_resize(bufnr)
   vim.keymap.set('n', 'q', ToggleScratch, { buffer = bufnr, desc = 'Close scratch buffer' })
 
