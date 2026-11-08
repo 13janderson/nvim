@@ -24,7 +24,7 @@ local function open(direction)
   if direction == 'vertical' then
     vim.cmd 'rightbelow vsplit'
   else
-    vim.cmd 'rightbelow split'
+    vim.cmd 'aboveleft split'
   end
 
   vim.cmd 'terminal'
