@@ -120,6 +120,12 @@ local function resize_scratch(bufnr)
   end
 end
 
+local function close_scratch_windows(bufnr)
+  for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
+    pcall(vim.api.nvim_win_close, win, true)
+  end
+end
+
 vim.api.nvim_create_autocmd({ 'ExitPre', 'VimLeavePre' }, {
   group = vim.api.nvim_create_augroup('ScratchAutosave', { clear = true }),
   callback = function(args)
@@ -164,9 +170,17 @@ function _G.ToggleScratch()
     end
   end
 
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if vim.api.nvim_win_get_buf(win) == existing_bufnr then
-      vim.api.nvim_win_close(win, false)
+  if existing_bufnr then
+    local open_in_current_tab = false
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      if vim.api.nvim_win_get_buf(win) == existing_bufnr then
+        open_in_current_tab = true
+        break
+      end
+    end
+
+    close_scratch_windows(existing_bufnr)
+    if open_in_current_tab then
       return
     end
   end
@@ -178,6 +192,7 @@ function _G.ToggleScratch()
   vim.bo[bufnr].buflisted = false
   vim.bo[bufnr].bufhidden = 'hide'
   setup_scratch_resize(bufnr)
+  vim.keymap.set('n', 'q', ToggleScratch, { buffer = bufnr, desc = 'Close scratch buffer' })
 
   local height = scratch_height(bufnr)
   local winnr = 0
