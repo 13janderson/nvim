@@ -6,6 +6,21 @@ local function week_commencing(week_offset)
   return os.date('%a-%d-%b-%Y', os.time(date) - (total_days * 24 * 60 * 60))
 end
 
+local function week_daily_links(week_offset)
+  week_offset = week_offset or 0
+  local date = os.date '*t'
+  local offset_to_monday = (date.wday == 1) and 6 or (date.wday - 2)
+  date.hour = 12
+  date.min = 0
+  date.sec = 0
+  local monday = os.time(date) - ((offset_to_monday - (week_offset * 7)) * 24 * 60 * 60)
+  local links = {}
+  for i = 0, 6 do
+    table.insert(links, string.format('- [[%s]]', os.date('%Y-%m-%d-%a', monday + (i * 24 * 60 * 60))))
+  end
+  return table.concat(links, '\n')
+end
+
 return {
   'epwalsh/obsidian.nvim',
   version = '*',
@@ -52,6 +67,9 @@ return {
         end,
         lwc = function()
           return week_commencing(-1)
+        end,
+        week_daily_links = function()
+          return week_daily_links()
         end,
       },
     },
