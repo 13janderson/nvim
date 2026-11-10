@@ -111,18 +111,46 @@ local function scratch_height(bufnr)
   return math.min(height, available)
 end
 
+local function tab_normal_window_count(tab)
+  local count = 0
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+    if vim.api.nvim_win_get_config(win).relative == '' then
+      count = count + 1
+    end
+  end
+  return count
+end
+
 local function resize_scratch(bufnr)
   local height = scratch_height(bufnr)
   for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
-    if vim.api.nvim_win_get_height(win) ~= height then
+    local tab = vim.api.nvim_win_get_tabpage(win)
+    if vim.api.nvim_win_get_config(win).relative == '' and tab_normal_window_count(tab) > 1 and vim.api.nvim_win_get_height(win) ~= height then
       pcall(vim.api.nvim_win_set_height, win, height)
     end
   end
 end
 
 local function close_scratch_windows(bufnr)
-  for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
-    pcall(vim.api.nvim_win_close, win, true)
+  local wins = vim.fn.win_findbuf(bufnr)
+  if #wins == 0 then
+    return
+  end
+
+  local previous_buf = vim.b[bufnr].scratch_prev_buf
+  for _, win in ipairs(wins) do
+    local tab = vim.api.nvim_win_get_tabpage(win)
+    if vim.api.nvim_win_get_config(win).relative == '' and tab_normal_window_count(tab) <= 1 then
+      if previous_buf and previous_buf ~= bufnr and vim.api.nvim_buf_is_valid(previous_buf) then
+        vim.api.nvim_win_set_buf(win, previous_buf)
+      else
+        vim.api.nvim_win_call(win, function()
+          vim.cmd 'enew'
+        end)
+      end
+    else
+      pcall(vim.api.nvim_win_close, win, true)
+    end
   end
 end
 
@@ -186,6 +214,7 @@ function _G.ToggleScratch()
   end
 
   local bufnr = existing_bufnr or vim.fn.bufadd(scratch_path)
+  local previous_buf = vim.api.nvim_get_current_buf()
   vim.fn.bufload(bufnr)
   vim.bo[bufnr].buftype = ''
   vim.bo[bufnr].swapfile = false
@@ -194,6 +223,10 @@ function _G.ToggleScratch()
   vim.bo[bufnr].filetype = 'markdown'
   setup_scratch_resize(bufnr)
   vim.keymap.set('n', 'q', ToggleScratch, { buffer = bufnr, desc = 'Close scratch buffer' })
+
+  if previous_buf ~= bufnr then
+    vim.b[bufnr].scratch_prev_buf = previous_buf
+  end
 
   local height = scratch_height(bufnr)
   local winnr = 0
@@ -206,8 +239,9 @@ function _G.ToggleScratch()
     })
   else
     vim.api.nvim_set_current_buf(bufnr)
-    resize_scratch(bufnr)
   end
 
-  vim.api.nvim_set_current_win(winnr)
+  if winnr ~= 0 then
+    vim.api.nvim_set_current_win(winnr)
+  end
 end
