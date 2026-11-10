@@ -30,6 +30,9 @@ return {
       -- - sr)'  - [S]urround [R]eplace [)] ['']
       require('mini.surround').setup()
 
+      -- Track visited files per project and rank them by robust frecency.
+      require('mini.visits').setup()
+
       -- Simple and easy statusline.
       local statusline = require 'mini.statusline'
 
@@ -180,6 +183,8 @@ return {
 
       -- ... and there is more!
       --  Check out: https://github.com/echasnovski/mini.nvim
+
+      require('custom.my.visits').setup()
     end,
   },
 }
