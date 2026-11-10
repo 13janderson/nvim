@@ -115,7 +115,7 @@ return {
           end, {})
 
           -- Format on save
-          vim.api.nvim_create_autocmd('BufWritePost', {
+          vim.api.nvim_create_autocmd('BufWritePre', {
             desc = 'LSP format on save',
             group = vim.api.nvim_create_augroup('lsp-format-on-save', { clear = true }),
             callback = function(e)
@@ -128,17 +128,33 @@ return {
               end
 
               local clients = vim.lsp.get_clients({ bufnr = bufnr })
-              if (#clients > 0) then
+              local supports_formatting = function(client)
+                return client:supports_method(vim.lsp.protocol.Methods.textDocument_formatting, bufnr)
+              end
+
+              local formatter = nil
+              for _, client in ipairs(clients) do
+                if client.name == 'ruff' and supports_formatting(client) then
+                  formatter = client
+                  break
+                end
+              end
+
+              if not formatter then
                 for _, client in ipairs(clients) do
-                  if client:supports_method(vim.lsp.protocol.Methods.textDocument_formatting, bufnr) then
-                    vim.lsp.buf.format({
-                      bufnr = e.buf,
-                      name = client.name,
-                      id = client.id,
-                    })
-                    return
+                  if supports_formatting(client) then
+                    formatter = client
+                    break
                   end
                 end
+              end
+
+              if formatter then
+                vim.lsp.buf.format({
+                  bufnr = e.buf,
+                  name = formatter.name,
+                  id = formatter.id,
+                })
               end
             end,
           })
@@ -247,57 +263,14 @@ return {
       local servers = {
         -- clangd = {},
         gopls = {},
-        pyright = {
-          flags = {
-            debounce_text_changes = 100, -- in ms
-          },
-          settings = {
-            handlers = {
-              -- Override the default rename handler to remove the `annotationId` from edits.
-              --
-              -- Pyright is being non-compliant here by returning `annotationId` in the edits, but not
-              -- populating the `changeAnnotations` field in the `WorkspaceEdit`. This causes Neovim to
-              -- throw an error when applying the workspace edit.
-              --
-              -- See:
-              -- - https://github.com/neovim/neovim/issues/34731
-              -- - https://github.com/microsoft/pyright/issues/10671
-              [vim.lsp.protocol.Methods.textDocument_rename] = function(err, result, ctx)
-                if err then
-                  vim.notify('Pyright rename failed: ' .. err.message, vim.log.levels.ERROR)
-                  return
-                end
-
-                ---@cast result lsp.WorkspaceEdit
-                for _, change in ipairs(result.documentChanges or {}) do
-                  for _, edit in ipairs(change.edits or {}) do
-                    if edit.annotationId then
-                      edit.annotationId = nil
-                    end
-                  end
-                end
-
-                local client = assert(vim.lsp.get_client_by_id(ctx.client_id))
-                vim.lsp.util.apply_workspace_edit(result, client.offset_encoding)
-              end,
-            },
-            python = {
-              analysis = {
-                autoSearchPaths = true,
-                useLibraryCodeForTypes = true,
-                diagnosticMode = "openFilesOnly",
-                typeCheckingMode = "standard",
-                strictListInference = true,
-                strictDictionaryInference = true,
-                strictSetInference = true,
-                reportUnknownMemberType = true, -- Warn on unknown members
-                reportAttributeAccessIssues = true,
-                reportMissingTypeStubs = false, -- You can turn this off to reduce noise
-                reportGeneralTypeIssues = true,
-              },
-            },
-          },
+        pyrefly = {
+          on_exit = function(code)
+            if code ~= 0 and code ~= 143 then
+              vim.notify('Pyrefly exited with code ' .. code, vim.log.levels.WARN)
+            end
+          end,
         },
+        ruff = {},
         powershell_es = {
           filetypes = { "ps1", "psm1", "psd1" },
         },
@@ -430,17 +403,15 @@ return {
       require('mason-lspconfig').setup {
         ensure_installed = {}, -- explicitly set to an empty table (Kickstart populates installs via mason-tool-installer)
         automatic_installation = false,
-        handlers = {
-          function(server_name)
-            local server = servers[server_name] or {}
-            -- This handles overriding only values explicitly passed
-            -- by the server configuration above. Useful when disabling
-            -- certain features of an LSP (for example, turning off formatting for ts_ls)
-            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-            require('lspconfig')[server_name].setup(server)
-          end,
-        },
+        automatic_enable = false,
       }
+
+      for server_name, server in pairs(servers) do
+        server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+        vim.lsp.config(server_name, server)
+      end
+
+      vim.lsp.enable(vim.tbl_keys(servers))
     end,
   },
 }
