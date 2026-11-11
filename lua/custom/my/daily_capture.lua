@@ -107,7 +107,6 @@ function M.open()
     else
       vim.api.nvim_set_current_buf(existing)
     end
-    vim.cmd 'startinsert'
     return
   end
 
@@ -131,9 +130,7 @@ function M.open()
     row = row,
     col = col,
     style = 'minimal',
-    border = 'rounded',
-    title = ' Capture to daily note ',
-    title_pos = 'center',
+    border = 'single',
   })
 
   vim.wo[win].wrap = true
@@ -147,6 +144,10 @@ function M.open()
     commit(buf, false)
   end, { buffer = buf, desc = 'Save capture and close' })
 
+  vim.keymap.set({ 'n', 'i' }, '<CR>', function()
+    commit(buf, false)
+  end, { buffer = buf, desc = 'Save capture and close' })
+
   vim.api.nvim_create_autocmd('BufUnload', {
     buffer = buf,
     once = true,
@@ -154,11 +155,9 @@ function M.open()
       commit(buf, true)
     end,
   })
-
-  vim.cmd 'startinsert'
 end
 
-vim.keymap.set('n', 'X', M.open, { desc = "Capture to today's daily note" })
+vim.keymap.set('n', 'm', M.open, { desc = "Capture to today's daily note" })
 vim.api.nvim_create_user_command('Capture', M.open, { desc = "Capture to today's daily note" })
 
 return M
