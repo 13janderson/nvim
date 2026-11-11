@@ -10,31 +10,45 @@ local function is_useful_visit(item)
   return true
 end
 
-local function make_entry(item)
-  local display = vim.fn.fnamemodify(item.path, ':~:.')
-  local labels = item.labels and vim.tbl_keys(item.labels) or {}
-  if #labels > 0 then
-    display = display .. ' [' .. table.concat(labels, ', ') .. ']'
+local function project_root()
+  local name = vim.api.nvim_buf_get_name(0)
+  return vim.fs.normalize(vim.fs.root(name ~= '' and name or vim.fn.getcwd(), { '.git' }) or vim.fn.getcwd())
+end
+
+local function make_filter(root)
+  local prefix = root:sub(-1) == '/' and root or (root .. '/')
+
+  return function(item)
+    if not is_useful_visit(item) then
+      return false
+    end
+
+    local path = vim.fs.normalize(item.path)
+    return path == root or vim.startswith(path, prefix)
   end
+end
+
+local function make_entry(path)
+  local display = vim.fn.fnamemodify(path, ':~:.')
 
   return {
-    value = item.path,
+    value = path,
     display = display,
     ordinal = display,
-    filename = item.path,
+    filename = path,
   }
 end
 
-local function pick(cwd, title)
+local function pick_project()
   local ok, visits = pcall(require, 'mini.visits')
   if not ok then
     vim.notify('mini.visits is not available', vim.log.levels.WARN)
     return
   end
 
-  local items = visits.list_paths(cwd, { filter = is_useful_visit })
+  local items = visits.list_paths('', { filter = make_filter(project_root()) })
   if #items == 0 then
-    vim.notify('No visits recorded yet', vim.log.levels.INFO)
+    vim.notify('No visits recorded for this project yet', vim.log.levels.INFO)
     return
   end
 
@@ -44,7 +58,7 @@ local function pick(cwd, title)
 
   pickers
     .new({}, {
-      prompt_title = title,
+      prompt_title = 'Visits (project frecency)',
       finder = finders.new_table {
         results = items,
         entry_maker = make_entry,
@@ -56,13 +70,7 @@ local function pick(cwd, title)
 end
 
 function M.setup()
-  vim.keymap.set('n', '<leader>sv', function()
-    pick(nil, 'Visits (project frecency)')
-  end, { desc = 'Visits: [S]earch project by frecency' })
-
-  vim.keymap.set('n', '<leader>sV', function()
-    pick('', 'Visits (all frecency)')
-  end, { desc = 'Visits: [S]earch all by frecency' })
+  vim.keymap.set('n', '<leader>sv', pick_project, { desc = 'Visits: [S]earch project by frecency' })
 end
 
 return M
