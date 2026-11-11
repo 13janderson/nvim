@@ -24,7 +24,6 @@ end
 return {
   'epwalsh/obsidian.nvim',
   version = '*',
-  cond = vim.startswith(vim.fn.getcwd(), vim.fn.expand '~/vault'),
   dependencies = { 'nvim-lua/plenary.nvim' },
   opts = {
     workspaces = {
