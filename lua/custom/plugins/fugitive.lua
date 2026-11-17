@@ -48,7 +48,7 @@ local function run_git(args, label)
       local output = vim.trim((res.stdout or '') .. (res.stderr or ''))
       local ok = res.code == 0
       local msg = output ~= '' and output
-        or ('git ' .. label .. (ok and ' succeeded' or (' failed (' .. tostring(res.code) .. ')')))
+          or ('git ' .. label .. (ok and ' succeeded' or (' failed (' .. tostring(res.code) .. ')')))
       if #msg > 500 then
         msg = msg:sub(1, 500) .. '…'
       end
@@ -152,24 +152,24 @@ return {
       -- Diffing uses vim-ug's built-in Ud / [count]Ud.
 
       -- git log
-      -- vim.keymap.set('n', 'Ul', function()
-      --   vim.cmd 'G log'
-      -- end)
+      vim.keymap.set('n', 'Ul', function()
+        vim.cmd 'G log'
+      end)
 
       -- -- git log --oneline
-      -- vim.keymap.set('n', '1Ul', function()
-      --   vim.cmd 'G log --oneline'
-      -- end)
+      vim.keymap.set('n', '1Ul', function()
+        vim.cmd 'G log --oneline'
+      end)
 
       -- git log --oneline for current file
-      -- vim.keymap.set('n', '1UL', function()
-      --   vim.cmd 'G log --oneline %'
-      -- end)
+      vim.keymap.set('n', '1UL', function()
+        vim.cmd 'G log --oneline %'
+      end)
 
       -- git log for current file
-      -- vim.keymap.set('n', 'UL', function()
-      --   vim.cmd 'G log %'
-      -- end)
+      vim.keymap.set('n', 'UL', function()
+        vim.cmd 'G log %'
+      end)
     end,
   },
   {
