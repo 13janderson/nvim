@@ -60,6 +60,86 @@ local function append_to_daily(lines)
   return path
 end
 
+local function note_path(dir, title)
+  local obsidian = require 'obsidian'
+  local client = obsidian.get_client()
+  return vim.fs.joinpath(tostring(client:vault_root()), dir, title .. '.md')
+end
+
+local function timestamp_title(dir)
+  local base = os.date '%Y-%m-%d-%H%M%S'
+  local title = base
+  local suffix = 1
+  while vim.fn.filereadable(note_path(dir, title)) == 1 do
+    suffix = suffix + 1
+    title = base .. '-' .. suffix
+  end
+  return title
+end
+
+local function save_note(dir, title, lines)
+  local obsidian = require 'obsidian'
+  local client = obsidian.get_client()
+
+  local note = client:create_note {
+    title = title,
+    id = title,
+    dir = dir,
+    no_write = true,
+  }
+
+  client:write_note(note, {
+    update_content = function(content)
+      vim.list_extend(content, { '' })
+      vim.list_extend(content, lines)
+      return content
+    end,
+  })
+
+  local path = tostring(note.path)
+  reload_if_open(path)
+  return path
+end
+
+--- Prompt for a note title. Returns nil when the user cancels, unless the
+--- buffer is already being unloaded, in which case fall back to a timestamp
+--- so the capture is not lost.
+local function prompt_title(dir, closing)
+  local ok, input = pcall(vim.fn.input, dir .. '/')
+  local title
+  if ok then
+    input = vim.trim(input or ''):gsub('%.md$', '')
+    title = vim.fs.basename(input)
+  end
+
+  if not title or title == '' or title == '.' or title == '..' then
+    if closing then
+      title = timestamp_title(dir)
+      vim.notify(
+        string.format('No title given; saved capture as %s/%s', dir, title),
+        vim.log.levels.WARN
+      )
+      return title
+    end
+    return nil
+  end
+
+  if vim.fn.filereadable(note_path(dir, title)) == 1 then
+    vim.notify(string.format('Note already exists: %s/%s', dir, title), vim.log.levels.WARN)
+    if closing then
+      title = timestamp_title(dir)
+      vim.notify(
+        string.format('Saved capture as %s/%s instead', dir, title),
+        vim.log.levels.WARN
+      )
+      return title
+    end
+    return nil
+  end
+
+  return title
+end
+
 local function commit(buf, closing)
   if not buffer_valid(buf) or committing or vim.b[buf].daily_capture_saved then
     return
@@ -84,10 +164,21 @@ local function commit(buf, closing)
     return
   end
 
-  local ok, result = pcall(append_to_daily, lines)
+  local target = vim.b[buf].daily_capture_target or 'daily'
+  local ok, result
+  if target == 'daily' then
+    ok, result = pcall(append_to_daily, lines)
+  else
+    local title = prompt_title(target, closing)
+    if not title then
+      committing = false
+      return
+    end
+    ok, result = pcall(save_note, target, title, lines)
+  end
   committing = false
   if not ok then
-    vim.notify(string.format('Daily capture failed: %s', result), vim.log.levels.ERROR)
+    vim.notify(string.format('Capture failed: %s', result), vim.log.levels.ERROR)
     return
   end
 
@@ -98,9 +189,12 @@ local function commit(buf, closing)
   end
 end
 
-function M.open()
+function M.open(target)
+  target = target or 'daily'
+
   local existing = find_capture_buffer()
   if existing then
+    vim.b[existing].daily_capture_target = target
     local wins = vim.fn.win_findbuf(existing)
     if #wins > 0 then
       vim.api.nvim_set_current_win(wins[1])
@@ -112,6 +206,7 @@ function M.open()
 
   local buf = vim.api.nvim_create_buf(false, true)
   vim.b[buf].daily_capture = true
+  vim.b[buf].daily_capture_target = target
   vim.bo[buf].buftype = 'nofile'
   vim.bo[buf].bufhidden = 'wipe'
   vim.bo[buf].swapfile = false
@@ -156,6 +251,14 @@ function M.open()
     end,
   })
 end
+
+vim.keymap.set('n', '1<C-n>', function()
+  M.open '1_source_material'
+end, { desc = 'Capture to source material' })
+
+vim.keymap.set('n', '2<C-n>', function()
+  M.open '2_ideas'
+end, { desc = 'Capture to ideas' })
 
 vim.api.nvim_create_user_command('Capture', M.open, { desc = "Capture to today's daily note" })
 

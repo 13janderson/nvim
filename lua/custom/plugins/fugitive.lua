@@ -177,7 +177,7 @@ return {
     config = function()
       -- keymap overrides
       vim.keymap.set('n', '<c-p>', '<c-^>', { noremap = false, silent = true })
-      local capture = require "custom.my.daily_capture"
+      local capture = require "custom.my.capture"
       vim.keymap.set('n', '<C-n>', capture.open, { desc = "Capture to today's daily note" })
 
       local push = function()

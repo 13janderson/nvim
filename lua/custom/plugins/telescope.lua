@@ -83,6 +83,14 @@ return {
         vim.o.splitright = original_splitright
       end
 
+      local function select_horizontal_above(prompt_bufnr)
+        local actions = require 'telescope.actions'
+        local original_splitbelow = vim.o.splitbelow
+        vim.o.splitbelow = false
+        actions.select_horizontal(prompt_bufnr)
+        vim.o.splitbelow = original_splitbelow
+      end
+
       require('telescope').setup {
         -- You can put your default mappings / updates / etc. in here
         --  All the info you're looking for is in `:help telescope.setup()`
@@ -106,6 +114,11 @@ return {
                 type = 'action',
                 opts = { desc = 'Open in vertical split' },
               },
+              ['<C-s>'] = {
+                select_horizontal_above,
+                type = 'action',
+                opts = { desc = 'Open in horizontal split (above)' },
+              },
               ['<C-y>'] = { copy_selection, type = 'action', opts = { desc = 'Copy selection' } },
               ['<C-a>'] = {
                 harpoon_telescope.add_only,
@@ -128,6 +141,11 @@ return {
                 select_vertical_right,
                 type = 'action',
                 opts = { desc = 'Open in vertical split' },
+              },
+              ['<C-s>'] = {
+                select_horizontal_above,
+                type = 'action',
+                opts = { desc = 'Open in horizontal split (above)' },
               },
               ['<C-h>'] = {
                 harpoon_telescope.add_and_open,

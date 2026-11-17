@@ -36,7 +36,7 @@ require 'custom.my.mistakes'
 require 'custom.my.mistakes'
 require 'custom.my.oil_filexplorer'
 require 'custom.my.split_new_buffer'
-require 'custom.my.daily_capture'
+require 'custom.my.capture'
 
 require('vim._core.ui2').enable {}
 
