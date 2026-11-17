@@ -157,7 +157,7 @@ function M.open()
   })
 end
 
-vim.keymap.set('n', 'm', M.open, { desc = "Capture to today's daily note" })
+vim.keymap.set('n', '<C-n>', M.open, { desc = "Capture to today's daily note" })
 vim.api.nvim_create_user_command('Capture', M.open, { desc = "Capture to today's daily note" })
 
 return M

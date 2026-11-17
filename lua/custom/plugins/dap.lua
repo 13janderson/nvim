@@ -177,6 +177,14 @@ return {
           args = { '${file}', '-v' },
           console = 'integratedTerminal',
         },
+        {
+          type = "python",
+          request = "launch",
+          name = "Launch file (justMyCode=false)",
+          program = "${file}",
+          console = "integratedTerminal",
+          justMyCode = false,
+        },
       })
     end,
   },

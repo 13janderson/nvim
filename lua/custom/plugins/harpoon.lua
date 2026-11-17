@@ -3,7 +3,7 @@ return {
     '13janderson/harpoon2',
     branch = 'harpoon2',
     event = 'VimEnter',
-    cond = not (vim.startswith(vim.fn.getcwd(), '/tmp') or vim.startswith(vim.fn.expand '%:p', '/tmp')),
+    cond = false,
     dependencies = { 'nvim-lua/plenary.nvim' },
     config = function()
       local harpoon = require 'harpoon'
