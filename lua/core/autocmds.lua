@@ -1,9 +1,8 @@
-vim.api.nvim_create_autocmd('BufEnter', {
-  desc = 'Turn on linewrap for markdown files',
-  pattern = { '*.md' },
+vim.api.nvim_create_autocmd({ 'BufEnter', 'FileType' }, {
+  desc = 'Wrap markdown buffers only',
   group = vim.api.nvim_create_augroup('MarkdownWrapOn', { clear = true }),
   callback = function()
-    vim.opt.wrap = true
+    vim.wo.wrap = vim.bo.filetype == 'markdown'
   end,
 })
 
