@@ -28,17 +28,6 @@ local function make_filter(root)
   end
 end
 
-local function make_entry(path)
-  local display = vim.fn.fnamemodify(path, ':~:.')
-
-  return {
-    value = path,
-    display = display,
-    ordinal = display,
-    filename = path,
-  }
-end
-
 local function pick_project()
   local ok, visits = pcall(require, 'mini.visits')
   if not ok then
@@ -54,14 +43,17 @@ local function pick_project()
 
   local pickers = require 'telescope.pickers'
   local finders = require 'telescope.finders'
+  local make_entry = require 'telescope.make_entry'
   local conf = require('telescope.config').values
 
+  -- Use Telescope's file entry maker so entries get devicons, a proper
+  -- `path`, and the file previewer.
   pickers
     .new({}, {
       prompt_title = 'Visits (project frecency)',
       finder = finders.new_table {
         results = items,
-        entry_maker = make_entry,
+        entry_maker = make_entry.gen_from_file {},
       },
       previewer = conf.file_previewer {},
       sorter = conf.generic_sorter {},
@@ -69,8 +61,10 @@ local function pick_project()
     :find()
 end
 
+M.pick_project = pick_project
+
 function M.setup()
-  vim.keymap.set('n', '<leader>sv', pick_project, { desc = 'Visits: [S]earch project by frecency' })
+  vim.keymap.set('n', '<leader>sv', M.pick_project, { desc = 'Visits: [S]earch project by frecency' })
 end
 
 return M

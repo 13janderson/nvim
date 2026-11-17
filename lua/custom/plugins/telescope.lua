@@ -42,6 +42,8 @@ return {
 
       -- [[ Configure Telescope ]]
       -- See `:help telescope` and `:help telescope.setup()`
+      local harpoon_telescope = require 'custom.my.telescope_harpoon'
+
       local function select_vertical_right(prompt_bufnr)
         local actions = require 'telescope.actions'
         local original_splitright = vim.o.splitright
@@ -67,19 +69,12 @@ return {
                 vim.fn.setreg('+', value)
                 vim.notify(value, nil, { title = 'Copied', icon = '󰅍' })
               end,
-              ['<C-a>'] = function(prompt_bufnr)
-                local entry = require('telescope.actions.state').get_selected_entry()
-                require('telescope.actions').close(prompt_bufnr)
-
-                local path = entry.path or entry.filename or entry.value
-                require('harpoon'):list():add {
-                  value = path,
-                  context = { row = entry.lnum or 1, col = entry.col or 1 },
-                }
-              end,
+              ['<C-a>'] = harpoon_telescope.add_only,
+              ['<C-h>'] = harpoon_telescope.add_and_open,
             },
             n = {
               ['<C-v>'] = select_vertical_right,
+              ['<C-h>'] = harpoon_telescope.add_and_open,
             },
           },
           file_ignore_patterns = {
