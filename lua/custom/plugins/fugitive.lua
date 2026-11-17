@@ -36,6 +36,32 @@ local function default_branch()
   return nil
 end
 
+--- Run a git command without blocking the editor and report the result.
+local function run_git(args, label)
+  vim.notify('git ' .. label .. '…', vim.log.levels.INFO, { title = 'git' })
+
+  vim.system(vim.list_extend({ 'git' }, args), {
+    text = true,
+    env = { GIT_TERMINAL_PROMPT = '0' },
+  }, function(res)
+    vim.schedule(function()
+      local output = vim.trim((res.stdout or '') .. (res.stderr or ''))
+      local ok = res.code == 0
+      local msg = output ~= '' and output
+        or ('git ' .. label .. (ok and ' succeeded' or (' failed (' .. tostring(res.code) .. ')')))
+      if #msg > 500 then
+        msg = msg:sub(1, 500) .. '…'
+      end
+      vim.notify(msg, ok and vim.log.levels.INFO or vim.log.levels.ERROR, { title = 'git ' .. label })
+    end)
+  end)
+end
+
+local function async_pull()
+  -- --no-edit keeps a merge from trying to open an editor in the background.
+  run_git({ 'pull', '--no-edit' }, 'pull')
+end
+
 local function guarded_push(command)
   local branch = git_lines { 'branch', '--show-current' }
   local current_branch = branch and branch[1]
@@ -56,7 +82,8 @@ local function guarded_push(command)
     return
   end
 
-  vim.cmd('G ' .. (command or 'push'))
+  local args = type(command) == 'table' and command or vim.split(command or 'push', ' ', { trimempty = true })
+  run_git(args, 'push')
 end
 
 return {
@@ -97,166 +124,52 @@ return {
       end)
 
       -- Diff viewing keymaps
-      vim.keymap.set('n', '[c', '[czz')
-      vim.keymap.set('n', ']c', ']czz')
-
-      -- Whenever we are going between files with [q and and ]q we want to detect buffer changes
-      -- but we only want to do this when difftool has populated the qf list
-      local difftool_var = 'difftool'
-
-      local diffsplit_cmd = 'Gvdiffsplit!'
-
-      local function is_difftool_qf()
-        local qfbufnr = vim.fn.getqflist({ qfbufnr = 0 }).qfbufnr
-        if qfbufnr == 0 then
-          return false
-        end
-        local ok, val = pcall(vim.api.nvim_buf_get_var, qfbufnr, difftool_var)
-        return ok and val == true
-      end
-
-      local function close_fugitive_diffs()
-        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-          if vim.api.nvim_buf_get_name(buf):match '^fugitive://' then
-            vim.api.nvim_buf_delete(buf, { force = true })
+      -- vim-ug's <C-n>/<C-p> hunk navigation is just a gitsigns wrapper when
+      -- not in diff mode, but <C-n>/<C-p> are repurposed below. Call gitsigns
+      -- directly so these keep working independently.
+      local function nav_hunk(direction)
+        return function()
+          if vim.wo.diff then
+            vim.cmd('normal! ' .. (direction == 'next' and ']c' or '[c'))
+            return
           end
-        end
-      end
 
-      local function qf_navigate(dir)
-        local qf = vim.fn.getqflist { idx = 0, size = 0 }
-        if dir == 'next' and qf.idx >= qf.size then
-          return
-        end
-        if dir == 'prev' and qf.idx <= 1 then
-          return
-        end
-        local prev_buf = vim.api.nvim_get_current_buf()
-        vim.cmd(dir == 'next' and 'cnext' or 'cprev')
-        if is_difftool_qf() and vim.api.nvim_get_current_buf() ~= prev_buf then
-          close_fugitive_diffs()
-          vim.cmd(diffsplit_cmd)
-        end
-      end
-
-      vim.keymap.set('n', '[q', function()
-        qf_navigate 'prev'
-      end)
-      vim.keymap.set('n', ']q', function()
-        qf_navigate 'next'
-      end)
-
-      local pre_diff_bufnr = nil
-      local is_qf_open = function()
-        for _, tp in ipairs(vim.api.nvim_list_tabpages()) do
-          for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tp)) do
-            if vim.fn.win_gettype(win) == 'quickfix' then
-              return true
-            end
+          local ok, gitsigns = pcall(require, 'gitsigns')
+          if not ok then
+            return
           end
-        end
-        return false
-      end
 
-      local function diff_toggle_off()
-        local diff_tabpage = nil
-        for _, tp in ipairs(vim.api.nvim_list_tabpages()) do
-          for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tp)) do
-            if vim.fn.win_gettype(win) == 'quickfix' then
-              diff_tabpage = tp
-              break
-            end
-          end
-          if diff_tabpage then
-            break
-          end
-        end
-
-        if diff_tabpage then
-          vim.api.nvim_set_current_tabpage(diff_tabpage)
-          vim.cmd 'diffoff!'
-          close_fugitive_diffs()
-          vim.cmd 'tabclose'
-        else
-          vim.cmd 'diffoff!'
-          close_fugitive_diffs()
-          vim.cmd 'only'
-        end
-        if pre_diff_bufnr and vim.api.nvim_buf_is_valid(pre_diff_bufnr) then
-          vim.api.nvim_set_current_buf(pre_diff_bufnr)
-          pre_diff_bufnr = nil
-          local qfbufnr = vim.fn.getqflist({ qfbufnr = 0 }).qfbufnr
-          pcall(vim.api.nvim_buf_del_var, qfbufnr, difftool_var)
+          local nav = direction == 'next' and gitsigns.next_hunk or gitsigns.prev_hunk
+          nav({ wrap = false }, function()
+            vim.cmd 'normal! zz'
+          end)
         end
       end
 
-      local function diff_toggle_on()
-        pre_diff_bufnr = vim.api.nvim_get_current_buf()
-        vim.api.nvim_create_autocmd('BufWinEnter', {
-          callback = function(e)
-            if vim.bo[e.buf].buftype == 'quickfix' then
-              vim.api.nvim_buf_set_var(e.buf, difftool_var, true)
-              vim.schedule(function()
-                vim.cmd(diffsplit_cmd)
-              end)
-            end
-          end,
-          once = true,
-        })
-      end
+      vim.keymap.set('n', ']c', nav_hunk 'next', { desc = 'Next hunk' })
+      vim.keymap.set('n', '[c', nav_hunk 'prev', { desc = 'Previous hunk' })
 
-      vim.keymap.set('n', 'Uf', function()
-        if is_qf_open() then
-          diff_toggle_off()
-        else
-          diff_toggle_on()
-          vim.cmd 'tab split'
-          vim.cmd 'G difftool'
-        end
-      end)
-
-      -- diff something specific
-      vim.keymap.set('n', 'UF', function()
-        if is_qf_open() then
-          diff_toggle_off()
-        else
-          diff_toggle_on()
-          vim.cmd 'tab split'
-          vim.api.nvim_feedkeys(':G difftool ', 'n', false)
-        end
-      end)
-
-      -- merge tool - resolve merge conflicts via quickfix + diffsplit in a new tab
-      vim.keymap.set('n', 'Um', function()
-        if is_qf_open() then
-          diff_toggle_off()
-        else
-          diff_toggle_on()
-          vim.cmd 'tab split'
-          vim.cmd 'G mergetool'
-        end
-      end)
+      -- Diffing uses vim-ug's built-in Ud / [count]Ud.
 
       -- git log
-      vim.keymap.set('n', 'Ul', function()
-        vim.cmd 'G log'
-      end)
+      -- vim.keymap.set('n', 'Ul', function()
+      --   vim.cmd 'G log'
+      -- end)
 
-      -- git log --oneline
-
-      vim.keymap.set('n', '1Ul', function()
-        vim.cmd 'G log --oneline'
-      end)
+      -- -- git log --oneline
+      -- vim.keymap.set('n', '1Ul', function()
+      --   vim.cmd 'G log --oneline'
+      -- end)
 
       -- git log --oneline for current file
-      vim.keymap.set('n', '1UL', function()
-        vim.cmd 'G log --oneline %'
-      end)
+      -- vim.keymap.set('n', '1UL', function()
+      --   vim.cmd 'G log --oneline %'
+      -- end)
 
       -- git log for current file
-      vim.keymap.set('n', 'UL', function()
-        vim.cmd 'G log %'
-      end)
+      -- vim.keymap.set('n', 'UL', function()
+      --   vim.cmd 'G log %'
+      -- end)
     end,
   },
   {
@@ -264,19 +177,21 @@ return {
     config = function()
       -- keymap overrides
       vim.keymap.set('n', '<c-p>', '<c-^>', { noremap = false, silent = true })
-      capture = require "custom.my.daily_capture"
+      local capture = require "custom.my.daily_capture"
       vim.keymap.set('n', '<C-n>', capture.open, { desc = "Capture to today's daily note" })
 
       local push = function()
         guarded_push 'push --no-verify'
       end
 
-      local pull = function()
-        vim.cmd 'G pull'
-      end
+      vim.keymap.set('n', 'Up', push, { desc = 'Git: push' })
+      vim.keymap.set('n', 'UP', async_pull, { desc = 'Git: pull' })
 
-      vim.keymap.set('n', 'Up', push, { noremap = false, silent = true })
-      vim.keymap.set('n', 'UP', pull, { noremap = false, silent = true })
+      vim.keymap.set('n', 'Uo', '<cmd>G checkout -<cr>', { desc = 'Git: previous branch' })
+      vim.keymap.set('n', 'UO', '<cmd>G checkout -<cr>', { desc = 'Git: previous branch' })
+
+      vim.keymap.set('n', 'Uz', '<cmd>G stash<cr>', { desc = 'Git: stash' })
+      vim.keymap.set('n', 'UZ', '<cmd>G stash pop<cr>', { desc = 'Git: stash pop' })
     end,
   },
 }

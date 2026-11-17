@@ -43,6 +43,37 @@ return {
       -- [[ Configure Telescope ]]
       -- See `:help telescope` and `:help telescope.setup()`
       local harpoon_telescope = require 'custom.my.telescope_harpoon'
+      local telescope_actions = require 'telescope.actions'
+
+      local function copy_selection(prompt_bufnr)
+        local entry = require('telescope.actions.state').get_selected_entry()
+        if not entry then
+          return
+        end
+        telescope_actions.close(prompt_bufnr)
+        vim.fn.setreg('+', entry.value)
+        vim.notify(entry.value, nil, { title = 'Copied', icon = '󰅍' })
+      end
+
+      local function toggle_qf()
+        for _, win in ipairs(vim.fn.getwininfo()) do
+          if win.quickfix == 1 then
+            vim.cmd 'cclose'
+            return
+          end
+        end
+        vim.cmd 'copen'
+      end
+
+      local function cq_passthrough()
+        local req_act, actions = pcall(require, 'telescope.actions')
+        local req_state, actions_state = pcall(require, 'telescope.actions.state')
+        if req_act and req_state and actions_state.get_current_picker(vim.api.nvim_get_current_buf()) then
+          actions.send_to_qflist()
+        else
+          toggle_qf()
+        end
+      end
 
       local function select_vertical_right(prompt_bufnr)
         local actions = require 'telescope.actions'
@@ -59,22 +90,55 @@ return {
         defaults = {
           mappings = {
             i = {
-              ['<C-c>'] = 'close',
-              ['<C-j>'] = 'move_selection_next',
-              ['<C-k>'] = 'move_selection_previous',
-              ['<C-v>'] = select_vertical_right,
-              ['<C-y>'] = function(prompt_bufnr)
-                local value = require('telescope.actions.state').get_selected_entry().value
-                require('telescope.actions').close(prompt_bufnr)
-                vim.fn.setreg('+', value)
-                vim.notify(value, nil, { title = 'Copied', icon = '󰅍' })
-              end,
-              ['<C-a>'] = harpoon_telescope.add_only,
-              ['<C-h>'] = harpoon_telescope.add_and_open,
+              ['<C-c>'] = { telescope_actions.close, type = 'action', opts = { desc = 'Close' } },
+              ['<C-j>'] = {
+                telescope_actions.move_selection_next,
+                type = 'action',
+                opts = { desc = 'Next item' },
+              },
+              ['<C-k>'] = {
+                telescope_actions.move_selection_previous,
+                type = 'action',
+                opts = { desc = 'Previous item' },
+              },
+              ['<C-v>'] = {
+                select_vertical_right,
+                type = 'action',
+                opts = { desc = 'Open in vertical split' },
+              },
+              ['<C-y>'] = { copy_selection, type = 'action', opts = { desc = 'Copy selection' } },
+              ['<C-a>'] = {
+                harpoon_telescope.add_only,
+                type = 'action',
+                opts = { desc = 'Add to Harpoon' },
+              },
+              ['<C-h>'] = {
+                harpoon_telescope.add_and_open,
+                type = 'action',
+                opts = { desc = 'Add to Harpoon and open' },
+              },
+              ['<C-Q>'] = {
+                cq_passthrough,
+                type = 'action',
+                opts = { desc = 'Send to quickfix / toggle quickfix' },
+              },
             },
             n = {
-              ['<C-v>'] = select_vertical_right,
-              ['<C-h>'] = harpoon_telescope.add_and_open,
+              ['<C-v>'] = {
+                select_vertical_right,
+                type = 'action',
+                opts = { desc = 'Open in vertical split' },
+              },
+              ['<C-h>'] = {
+                harpoon_telescope.add_and_open,
+                type = 'action',
+                opts = { desc = 'Add to Harpoon and open' },
+              },
+              ['<C-Q>'] = {
+                cq_passthrough,
+                type = 'action',
+                opts = { desc = 'Send to quickfix / toggle quickfix' },
+              },
             },
           },
           file_ignore_patterns = {
@@ -281,6 +345,7 @@ return {
 
       -- See `:help telescope.builtin`
       local builtin = require 'telescope.builtin'
+
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
@@ -302,31 +367,12 @@ return {
       vim.keymap.set('n', '<leader>sp', builtin.spell_suggest, { desc = '[S]earch S[p]ell' })
       vim.keymap.set('n', '<leader>su', builtin.buffers, { desc = '[S]earch B[u]ffers' })
       vim.keymap.set('n', '<leader>sb', builtin.git_branches, { desc = '[S]earch [B]ranches' })
+      vim.keymap.set('n', '<leader>sz', builtin.git_stash, { desc = '[S]earch Stas[h]' })
       vim.keymap.set('n', '<leader>s:', builtin.command_history, { desc = '[S]earch [C]ommands' })
 
-      -- Quickfix telescope pass through
-      -- Send picker entries to quickfix if in telescope picker, otherwise toggle quickfix. Super nice
-      local function toggle_qf()
-        for _, win in ipairs(vim.fn.getwininfo()) do
-          if win.quickfix == 1 then
-            vim.cmd 'cclose'
-            return
-          end
-        end
-        vim.cmd 'copen'
-      end
-
-      local cq_passthrough = function()
-        local req_act, actions = pcall(require, 'telescope.actions')
-        local req_state, actions_state = pcall(require, 'telescope.actions.state')
-        if req_act and req_state and actions_state.get_current_picker(vim.api.nvim_get_current_buf()) then
-          -- local ok, builtin = pcall(require, "telescope.builtin")
-          actions.send_to_qflist()
-        else
-          toggle_qf()
-        end
-      end
-      vim.keymap.set('n', '<C-Q>', cq_passthrough, { desc = 'Quickfix Passthrough to telescope or toggle' })
+      -- Quickfix passthrough outside pickers. Inside a picker this is also
+      -- registered as a prompt mapping above so it shows in <C-/>/? help.
+      vim.keymap.set('n', '<C-Q>', cq_passthrough, { desc = 'Quickfix passthrough / toggle' })
 
       vim.api.nvim_create_user_command('TelescopeColors', function()
         builtin.colorscheme {
