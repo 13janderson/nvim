@@ -134,18 +134,9 @@ return {
 
               local formatter = nil
               for _, client in ipairs(clients) do
-                if client.name == 'ruff' and supports_formatting(client) then
+                if supports_formatting(client) then
                   formatter = client
                   break
-                end
-              end
-
-              if not formatter then
-                for _, client in ipairs(clients) do
-                  if supports_formatting(client) then
-                    formatter = client
-                    break
-                  end
                 end
               end
 
@@ -324,7 +315,7 @@ return {
         --     end
         --   end,
         -- },
-        -- ruff = {},
+        ruff = {},
         powershell_es = {
           filetypes = { "ps1", "psm1", "psd1" },
         },
