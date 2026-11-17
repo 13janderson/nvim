@@ -3,14 +3,12 @@ local M = {}
 -- Per-pwd terminal state. Each entry: { bufnr, prevwid, prevtab, prevbuf }
 local term_shell_by_pwd = {}
 local term_opencode_by_pwd = {}
-local term_hunk_by_pwd = {}
 local term_lazydocker_by_pwd = {}
 
 -- Registry of togglable terminal dicts. Add future terminal types here.
 local term_dicts = {
   term_shell_by_pwd,
   term_opencode_by_pwd,
-  term_hunk_by_pwd,
   term_lazydocker_by_pwd,
 }
 
@@ -24,11 +22,6 @@ local keymap_configs = {
       { '<C-d>', 'i<C-PageDown><C-\\><C-n>', { desc = 'Half page down' } },
       { 'gg',    'i<Home><C-\\><C-n>',       { desc = 'Jump to first message' } },
       { 'G',     'i<End><C-\\><C-n>',        { desc = 'Jump to last message' } },
-    },
-  },
-  [term_hunk_by_pwd] = {
-    t = {
-      { '<C-C>', '<Esc>', { desc = 'Exit terminal mode' } },
     },
   },
 }
@@ -145,27 +138,6 @@ local function goto_previous_context(term_info)
       end
     else
       vim.cmd 'wincmd p'
-    end
-  end
-end
-
-local function kill_hunk_sessions()
-  local output = vim.fn.system('hunk session list --json')
-  if vim.v.shell_error ~= 0 then
-    return
-  end
-  local ok, data = pcall(vim.json.decode, output)
-  if not ok or not data then
-    return
-  end
-  local sessions = data.sessions
-  if type(sessions) ~= 'table' then
-    return
-  end
-  local cwd = vim.uv.cwd()
-  for _, session in ipairs(sessions) do
-    if session.pid and type(session.pid) == 'number' and session.cwd == cwd then
-      vim.uv.kill(session.pid, 9)
     end
   end
 end
@@ -357,16 +329,6 @@ function M.ctrl_x(cnt, here)
     terminal_visible_in_current_tab(term_shell_by_pwd), false)
 end
 
-function M.ctrl_g(cnt, here)
-  local pwd = vim.fn.getcwd()
-  local existing = term_hunk_by_pwd[pwd]
-  if not (existing and buf_valid(existing.bufnr)) then
-    kill_hunk_sessions()
-  end
-  ctrl_toggle(cnt, here, term_hunk_by_pwd, 'hunk diff --watch', '<C-g>',
-    terminal_visible_in_current_tab(term_shell_by_pwd), true)
-end
-
 -- Lazydocker toggle. Requires lazydocker to be installed (https://github.com/jesseduffield/lazydocker).
 -- NOTE: <C-t> overrides the default Vim "pop tag" mapping. If you use ctags,
 -- consider remapping this to something else (e.g. <leader>ld).
@@ -394,14 +356,6 @@ end, { remap = false })
 
 vim.keymap.set('n', "'<C-x>", function()
   M.ctrl_x(vim.v.count, true)
-end, { remap = false })
-
-vim.keymap.set('n', '<C-g>', function()
-  M.ctrl_g(vim.v.count, false)
-end, { remap = false })
-
-vim.keymap.set('n', "'<C-g>", function()
-  M.ctrl_g(vim.v.count, true)
 end, { remap = false })
 
 vim.keymap.set('n', 'D', function()
@@ -460,19 +414,6 @@ end, { desc = 'Send selected lines to OpenCode' })
 -- vim.api.nvim_create_user_command('Opencodes', function()
 --   list_terminals(term_opencode_by_pwd, 'opencode')
 -- end, {})
-
--- Re-set keymaps after plugins (e.g. vim-ug) load and may have overwritten them.
-vim.api.nvim_create_autocmd('UIEnter', {
-  once = true,
-  callback = function()
-    vim.keymap.set('n', '<C-g>', function()
-      M.ctrl_g(vim.v.count, false)
-    end, { remap = false })
-    vim.keymap.set('n', "'<C-g>", function()
-      M.ctrl_g(vim.v.count, true)
-    end, { remap = false })
-  end,
-})
 
 -- Wipe tracked terminal buffers on exit so they don't leak into sessions.
 vim.api.nvim_create_autocmd('VimLeavePre', {
