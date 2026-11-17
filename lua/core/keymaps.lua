@@ -3,6 +3,10 @@ vim.keymap.set('n', 'gl', function()
 end, { desc = 'Copy current file path' })
 
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+vim.keymap.set('n', '<leader>sp', function()
+  vim.wo.spell = not vim.wo.spell
+  vim.notify('spell ' .. (vim.wo.spell and 'on' or 'off'))
+end, { desc = 'Toggle spell' })
 vim.keymap.set('n', '<CR>', '<NOP>', { noremap = true, silent = true })
 
 vim.keymap.set('t', '<C-]><C-n>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })

@@ -30,6 +30,11 @@ vim.opt.scrolloff = 10
 vim.opt.confirm = false
 vim.opt.termguicolors = true
 
+-- Save the window layout, not every buffer and terminal we ever opened.
+-- `buffers` makes persistence restore every listed/hidden buffer forever;
+-- `terminal` resurrects dead terminal buffers.
+vim.opt.sessionoptions = 'blank,curdir,folds,help,tabpages,winsize'
+
 -- Treesitter supplies the fold expression; keep folds open until explicitly closed.
 -- vim.opt.foldmethod = 'expr'
 -- vim.opt.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
