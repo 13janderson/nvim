@@ -307,6 +307,7 @@ return {
       vim.keymap.set('n', '<leader>sp', builtin.spell_suggest, { desc = '[S]earch S[p]ell' })
       vim.keymap.set('n', '<leader>su', builtin.buffers, { desc = '[S]earch B[u]ffers' })
       vim.keymap.set('n', '<leader>sb', builtin.git_branches, { desc = '[S]earch [B]ranches' })
+      vim.keymap.set('n', '<leader>s:', builtin.command_history, { desc = '[S]earch [C]ommands' })
 
       -- Quickfix telescope pass through
       -- Send picker entries to quickfix if in telescope picker, otherwise toggle quickfix. Super nice
