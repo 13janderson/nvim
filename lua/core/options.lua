@@ -1,6 +1,11 @@
 vim.o.winborder = 'rounded'
 vim.g.have_nerd_font = true
 
+-- We do not use Neovim's Python provider. Disable it so `has('python3')` does
+-- not trigger slow host detection on the first Python buffer.
+vim.g.loaded_python3_provider = 0
+vim.g.loaded_python_provider = 0
+
 vim.cmd [[
   let g:omni_sql_no_default_maps = 1
 ]]
