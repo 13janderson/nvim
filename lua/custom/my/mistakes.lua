@@ -44,5 +44,5 @@ for _, c in ipairs(commands) do
   end
 end
 
--- Prevent accidentally opening the command-line window when typing :q:
--- vim.keymap.set('n', 'q:', ':q<CR>')
+-- Prevent accidentally opening the command-line window when typing :q
+vim.keymap.set('n', 'q:', '')
