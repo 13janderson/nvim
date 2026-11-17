@@ -471,12 +471,6 @@ vim.api.nvim_create_autocmd('UIEnter', {
     vim.keymap.set('n', "'<C-g>", function()
       M.ctrl_g(vim.v.count, true)
     end, { remap = false })
-    vim.keymap.set('n', '<C-t>', function()
-      M.ctrl_t(vim.v.count, false)
-    end, { remap = false })
-    vim.keymap.set('n', "'<C-t>", function()
-      M.ctrl_t(vim.v.count, true)
-    end, { remap = false })
   end,
 })
 
