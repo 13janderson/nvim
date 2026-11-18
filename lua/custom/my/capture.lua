@@ -23,6 +23,24 @@ local function close_buffer(buf)
   end
 end
 
+
+local function set_capture_identity(buf, target)
+  local label = target
+  local name = 'capture://' .. label
+  if vim.api.nvim_buf_get_name(buf) ~= name then
+    pcall(vim.api.nvim_buf_set_name, buf, name)
+  end
+  for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+    if vim.api.nvim_win_get_config(win).relative ~= '' then
+      pcall(vim.api.nvim_win_set_config, win, {
+        title = label,
+        title_pos = 'left',
+      })
+    end
+  end
+  return label
+end
+
 local function reload_if_open(path)
   local target = vim.fn.fnamemodify(path, ':p')
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
@@ -189,12 +207,13 @@ local function commit(buf, closing)
   end
 end
 
-function M.open(target)
+function M.open(target, tiled)
   target = target or 'daily'
 
   local existing = find_capture_buffer()
   if existing then
     vim.b[existing].daily_capture_target = target
+    set_capture_identity(existing, target)
     local wins = vim.fn.win_findbuf(existing)
     if #wins > 0 then
       vim.api.nvim_set_current_win(wins[1])
@@ -207,6 +226,7 @@ function M.open(target)
   local buf = vim.api.nvim_create_buf(false, true)
   vim.b[buf].daily_capture = true
   vim.b[buf].daily_capture_target = target
+  local label = set_capture_identity(buf, target)
   vim.bo[buf].buftype = 'nofile'
   vim.bo[buf].bufhidden = 'wipe'
   vim.bo[buf].swapfile = false
@@ -218,15 +238,25 @@ function M.open(target)
   local row = math.max(0, math.floor((vim.o.lines - height) / 2) - 1)
   local col = math.max(0, math.floor((vim.o.columns - width) / 2))
 
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = 'editor',
-    width = width,
-    height = height,
-    row = row,
-    col = col,
-    style = 'minimal',
-    border = 'single',
-  })
+  local win
+  if tiled then
+    vim.cmd 'aboveleft split'
+    win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(win, buf)
+    vim.api.nvim_win_set_height(win, height)
+  else
+    win = vim.api.nvim_open_win(buf, true, {
+      relative = 'editor',
+      width = width,
+      height = height,
+      row = row,
+      col = col,
+      style = 'minimal',
+      border = 'single',
+      title = label,
+      title_pos = 'left',
+    })
+  end
 
   vim.wo[win].wrap = true
   vim.wo[win].linebreak = true
@@ -252,6 +282,10 @@ function M.open(target)
   })
 end
 
+vim.keymap.set('n', 't<C-n>', function()
+  M.open('daily', true)
+end, { desc = 'Capture to daily note (tiled)' })
+
 vim.keymap.set('n', '1<C-n>', function()
   M.open '1_source_material'
 end, { desc = 'Capture to source material' })
@@ -259,6 +293,14 @@ end, { desc = 'Capture to source material' })
 vim.keymap.set('n', '2<C-n>', function()
   M.open '2_ideas'
 end, { desc = 'Capture to ideas' })
+
+vim.keymap.set('n', '1t<C-n>', function()
+  M.open('1_source_material', true)
+end, { desc = 'Capture to source material (tiled)' })
+
+vim.keymap.set('n', '2t<C-n>', function()
+  M.open('2_ideas', true)
+end, { desc = 'Capture to ideas (tiled)' })
 
 vim.api.nvim_create_user_command('Capture', M.open, { desc = "Capture to today's daily note" })
 
