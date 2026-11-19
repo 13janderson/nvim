@@ -77,22 +77,6 @@ return {
         end
       end
 
-      local function section_harpoon()
-        local ok, harpoon = pcall(require, 'harpoon')
-        if not ok then
-          return ''
-        end
-        local list = harpoon:list()
-        local items = list and list.items or {}
-        local path = vim.api.nvim_buf_get_name(0)
-        for i, item in ipairs(items) do
-          if item.value == path then
-            return '󰛢 ' .. i
-          end
-        end
-        return ''
-      end
-
       local function section_lsp()
         local clients = vim.lsp.get_clients { bufnr = 0 }
         if #clients == 0 then
@@ -103,14 +87,6 @@ return {
           table.insert(names, c.name)
         end
         return ' ' .. table.concat(names, ',')
-      end
-
-      local function section_dap()
-        local ok, dap = pcall(require, 'dap')
-        if not ok or not dap.session() then
-          return ''
-        end
-        return ' DEBUG'
       end
 
       local function section_macro()
@@ -126,13 +102,6 @@ return {
           return ''
         end
         return '󰈭 ' .. vim.fn.wordcount().words .. ' words'
-      end
-
-      local function section_vault()
-        if vim.startswith(vim.fn.getcwd(), vim.fn.expand '~/vault') then
-          return '󰠮 vault'
-        end
-        return ''
       end
 
       local function section_diagnostics()
@@ -162,20 +131,17 @@ return {
             local wordcount = section_wordcount()
             local location = statusline.section_location {}
             local terminal = section_terminal()
-            local harpoon = section_harpoon()
             local macro = section_macro()
-            local dap = section_dap()
-            local vault = section_vault()
 
             return statusline.combine_groups {
-              { hl = mode_hl, strings = { mode, macro, dap } },
-              { hl = 'MiniStatuslineDevinfo', strings = { git, vault, terminal } },
+              { hl = mode_hl,                 strings = { mode, macro } },
+              { hl = 'MiniStatuslineDevinfo', strings = { git, terminal } },
               '%<',
               { hl = 'MiniStatuslineFilename', strings = { filename } },
               '%=',
-              { hl = 'MiniStatuslineDevinfo', strings = { diagnostics, lsp, harpoon } },
+              { hl = 'MiniStatuslineDevinfo',  strings = { diagnostics, lsp } },
               { hl = 'MiniStatuslineFileinfo', strings = { fileinfo, wordcount } },
-              { hl = mode_hl, strings = { location } },
+              { hl = mode_hl,                  strings = { location } },
             }
           end,
         },
