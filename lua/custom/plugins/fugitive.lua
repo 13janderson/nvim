@@ -1,7 +1,13 @@
+-- Run a git command through Fugitive and return its stdout lines, or nil on failure.
 local function git_lines(args)
-  local lines = vim.fn.systemlist(vim.list_extend({ 'git' }, args))
-  if vim.v.shell_error ~= 0 then
+  local ok, res = pcall(vim.fn.FugitiveExecute, args)
+  if not ok or res.exit_status ~= 0 then
     return nil
+  end
+
+  local lines = vim.list_extend({}, res.stdout or {})
+  while lines[#lines] == '' do
+    table.remove(lines)
   end
   return lines
 end
@@ -26,7 +32,7 @@ local function default_branch()
     if details then
       for _, line in ipairs(details) do
         local branch = line:match '^%s*HEAD branch:%s*(.+)%s*$'
-        if branch and branch ~= '(unknown)' then
+        if branch and branch ~= '(unknown)' and branch ~= '(not queried)' then
           return branch
         end
       end
@@ -36,25 +42,31 @@ local function default_branch()
   return nil
 end
 
+local function git_output(res)
+  local lines = vim.list_extend({}, res.stdout or {})
+  vim.list_extend(lines, res.stderr or {})
+  return vim.trim(table.concat(lines, '\n'))
+end
+
 --- Run a git command without blocking the editor and report the result.
 local function run_git(args, label)
   vim.notify('git ' .. label .. '…', vim.log.levels.INFO, { title = 'git' })
 
-  vim.system(vim.list_extend({ 'git' }, args), {
-    text = true,
-    env = { GIT_TERMINAL_PROMPT = '0' },
-  }, function(res)
+  local ok, err = pcall(vim.fn.FugitiveExecute, args, { env = { GIT_TERMINAL_PROMPT = '0' } }, function(res)
     vim.schedule(function()
-      local output = vim.trim((res.stdout or '') .. (res.stderr or ''))
-      local ok = res.code == 0
-      local msg = output ~= '' and output
-          or ('git ' .. label .. (ok and ' succeeded' or (' failed (' .. tostring(res.code) .. ')')))
+      local output = git_output(res)
+      local success = res.exit_status == 0
+      local msg = output ~= '' and output or ('git ' .. label .. (success and ' succeeded' or (' failed (' .. tostring(res.exit_status) .. ')')))
       if #msg > 500 then
         msg = msg:sub(1, 500) .. '…'
       end
-      vim.notify(msg, ok and vim.log.levels.INFO or vim.log.levels.ERROR, { title = 'git ' .. label })
+      vim.notify(msg, success and vim.log.levels.INFO or vim.log.levels.ERROR, { title = 'git ' .. label })
     end)
   end)
+
+  if not ok then
+    vim.notify('git ' .. label .. ' failed: ' .. tostring(err), vim.log.levels.ERROR, { title = 'git ' .. label })
+  end
 end
 
 local function async_pull()
