@@ -21,10 +21,16 @@ local function wipe_buf(buf)
 end
 
 local function open(direction)
+  local cwd = vim.bo.buftype == 'terminal' and vim.uv.cwd() or nil
+
   if direction == 'vertical' then
     vim.cmd 'rightbelow vsplit'
   else
     vim.cmd 'aboveleft split'
+  end
+
+  if cwd then
+    vim.cmd('lcd ' .. vim.fn.fnameescape(cwd))
   end
 
   vim.cmd 'terminal'
