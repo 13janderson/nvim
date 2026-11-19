@@ -180,7 +180,7 @@ return {
         {
           type = "python",
           request = "launch",
-          name = "Launch file (justMyCode=false)",
+          name = "Python: Launch file (justMyCode=false)",
           program = "${file}",
           console = "integratedTerminal",
           justMyCode = false,
