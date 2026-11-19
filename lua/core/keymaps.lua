@@ -24,13 +24,10 @@ vim.keymap.set('n', 'N', 'Nzzzv')
 vim.keymap.set('x', '<leader>p', [["_dP]])
 vim.keymap.set('n', '<C-p>', '<C-^>', { noremap = false, silent = true })
 
-local resize_amount = 10
-vim.keymap.set('n', '<C-W>>', function()
-  vim.api.nvim_win_set_width(0, vim.api.nvim_win_get_width(0) + resize_amount)
-end)
-vim.keymap.set('n', '<C-W><', function()
-  vim.api.nvim_win_set_width(0, vim.api.nvim_win_get_width(0) - resize_amount)
-end)
+vim.keymap.set('n', '<C-W>>', '10<C-W>>')
+vim.keymap.set('n', '<C-W><', '10<C-W><')
+vim.keymap.set('n', '<C-W>+', '5<C-W>+')
+vim.keymap.set('n', '<C-W>-', '5<C-W>-')
 
 vim.api.nvim_set_keymap('c', '<C-j>', '<C-n>', { noremap = false })
 vim.api.nvim_set_keymap('c', '<C-k>', '<C-p>', { noremap = false })
