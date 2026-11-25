@@ -24,6 +24,7 @@ vim.keymap.set('n', 'N', 'Nzzzv')
 vim.keymap.set('x', '<leader>p', [["_dP]])
 vim.keymap.set('n', '<C-p>', '<C-^>', { noremap = false, silent = true })
 
+-- Resizing
 vim.keymap.set('n', '<C-W>>', '10<C-W>>')
 vim.keymap.set('n', '<C-W><', '10<C-W><')
 vim.keymap.set('n', '<C-W>+', '5<C-W>+')
@@ -32,3 +33,14 @@ vim.keymap.set('n', '<C-W>-', '5<C-W>-')
 vim.api.nvim_set_keymap('c', '<C-j>', '<C-n>', { noremap = false })
 vim.api.nvim_set_keymap('c', '<C-k>', '<C-p>', { noremap = false })
 vim.keymap.set('n', 'gf', OpenLink, { noremap = true, silent = true })
+
+-- Tabs
+vim.keymap.set('n', '<C-t>o', function()
+  vim.cmd 'tabm 0'
+  local tabs = #vim.api.nvim_list_tabpages()
+  -- print("tabs", tabs)
+  for i = tabs, 2, -1 do
+    vim.cmd('tabc ' .. i)
+    -- print('tabc ' .. i)
+  end
+end)

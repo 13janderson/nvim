@@ -34,6 +34,7 @@ vim.opt.cursorline = false
 vim.opt.scrolloff = 10
 vim.opt.confirm = false
 vim.opt.termguicolors = true
+vim.opt.colorcolumn = "120"
 
 -- Save the window layout, not every buffer and terminal we ever opened.
 -- `buffers` makes persistence restore every listed/hidden buffer forever;
