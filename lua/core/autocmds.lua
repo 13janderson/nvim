@@ -23,10 +23,22 @@ vim.api.nvim_create_autocmd('FileType', {
 
 vim.api.nvim_create_autocmd('QuickFixCmdPost', {
   callback = function()
-    for i, entry in ipairs(vim.fn.getqflist()) do
-      if entry.valid ~= nil and entry.valid == 1 then
-        print('swtiching to ' .. i)
-        vim.cmd(string.format('cc! %d', i))
+    local qf = vim.fn.getqflist({ id = 0, items = true })
+    for i, entry in ipairs(qf.items) do
+      if entry.valid == 1 then
+        -- Jump after the command finishes: `open_qflist`/`:copen` runs after
+        -- this event and would otherwise leave the cursor in the qf window.
+        local qfid = qf.id
+        vim.schedule(function()
+          -- Skip if the list was replaced or cleared in the meantime.
+          if vim.fn.getqflist({ id = 0 }).id ~= qfid then
+            return
+          end
+          if #vim.fn.getqflist() < i then
+            return
+          end
+          vim.cmd('silent cc! ' .. i)
+        end)
         return
       end
     end
