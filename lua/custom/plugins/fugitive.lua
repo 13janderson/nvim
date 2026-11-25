@@ -12,6 +12,9 @@ return {
       -- vim.keymap.set({ 'n', 'v' }, '<leader>(', 'd2o')
       -- vim.keymap.set({ 'n', 'v' }, '<leader>)', 'd3o')
 
+      vim.keymap.set('n', '<leader>co', function()
+        vim.cmd 'G commit -a'
+      end)
 
       -- git log
       vim.keymap.set('n', 'Ul', function()
