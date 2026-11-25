@@ -32,29 +32,3 @@ vim.keymap.set('n', '<C-W>-', '5<C-W>-')
 vim.api.nvim_set_keymap('c', '<C-j>', '<C-n>', { noremap = false })
 vim.api.nvim_set_keymap('c', '<C-k>', '<C-p>', { noremap = false })
 vim.keymap.set('n', 'gf', OpenLink, { noremap = true, silent = true })
-
--- Tabs
-vim.keymap.set('n', '<C-t>o', function()
-  vim.cmd 'tabm 0'
-  local tabs = #vim.api.nvim_list_tabpages()
-  -- print("tabs", tabs)
-  for i = tabs, 2, -1 do
-    vim.cmd('tabc ' .. i)
-    -- print('tabc ' .. i)
-  end
-end)
-
-
--- quickfix
-local function toggle_qf()
-  for _, win in ipairs(vim.fn.getwininfo()) do
-    if win.quickfix == 1 then
-      vim.cmd 'cclose'
-      return
-    end
-  end
-  vim.cmd 'copen'
-end
-
--- vim.keymap.set('n', '<leader>q', vim.diagnostic.setqflist, { desc = 'Open diagnostic [Q]uickfix list' })
-vim.keymap.set('n', '<C-Q>', toggle_qf, { desc = 'Open diagnostic [Q]uickfix list' })

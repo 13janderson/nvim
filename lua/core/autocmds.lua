@@ -25,7 +25,8 @@ vim.api.nvim_create_autocmd('QuickFixCmdPost', {
   callback = function()
     for i, entry in ipairs(vim.fn.getqflist()) do
       if entry.valid ~= nil and entry.valid == 1 then
-        vim.cmd(string.format('cc %d', i))
+        print('swtiching to ' .. i)
+        vim.cmd(string.format('cc! %d', i))
         return
       end
     end

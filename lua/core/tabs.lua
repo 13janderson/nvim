@@ -13,3 +13,14 @@ end)
 for i = 1, 10, 1 do
   vim.keymap.set('n', string.format('<M-%d>', i), function() vim.cmd(string.format('tabn %d', i)) end)
 end
+
+-- Like C-W-o (:only)
+vim.keymap.set('n', '<C-t>o', function()
+  vim.cmd 'tabm 0'
+  local tabs = #vim.api.nvim_list_tabpages()
+  -- print("tabs", tabs)
+  for i = tabs, 2, -1 do
+    vim.cmd('tabc ' .. i)
+    -- print('tabc ' .. i)
+  end
+end)
