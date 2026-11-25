@@ -127,20 +127,18 @@ return {
             local diagnostics = section_diagnostics()
             local lsp = section_lsp()
             local filename = statusline.section_filename { trunc_width = 140 }
-            local fileinfo = statusline.section_fileinfo { trunc_width = 120 }
             local wordcount = section_wordcount()
             local location = statusline.section_location {}
             local terminal = section_terminal()
-            local macro = section_macro()
 
             return statusline.combine_groups {
-              { hl = mode_hl,                 strings = { mode, macro } },
+              { hl = mode_hl,                 strings = { mode } },
               { hl = 'MiniStatuslineDevinfo', strings = { git, terminal } },
               '%<',
               { hl = 'MiniStatuslineFilename', strings = { filename } },
               '%=',
               { hl = 'MiniStatuslineDevinfo',  strings = { diagnostics, lsp } },
-              { hl = 'MiniStatuslineFileinfo', strings = { fileinfo, wordcount } },
+              { hl = 'MiniStatuslineFileinfo', strings = { wordcount } },
               { hl = mode_hl,                  strings = { location } },
             }
           end,

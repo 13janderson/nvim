@@ -55,26 +55,6 @@ return {
         vim.notify(entry.value, nil, { title = 'Copied', icon = '󰅍' })
       end
 
-      local function toggle_qf()
-        for _, win in ipairs(vim.fn.getwininfo()) do
-          if win.quickfix == 1 then
-            vim.cmd 'cclose'
-            return
-          end
-        end
-        vim.cmd 'copen'
-      end
-
-      local function cq_passthrough()
-        local req_act, actions = pcall(require, 'telescope.actions')
-        local req_state, actions_state = pcall(require, 'telescope.actions.state')
-        if req_act and req_state and actions_state.get_current_picker(vim.api.nvim_get_current_buf()) then
-          actions.send_to_qflist()
-        else
-          toggle_qf()
-        end
-      end
-
       local function select_vertical_right(prompt_bufnr)
         local actions = require 'telescope.actions'
         local original_splitright = vim.o.splitright
@@ -125,15 +105,10 @@ return {
                 type = 'action',
                 opts = { desc = 'Add to Harpoon' },
               },
-              ['<C-h>'] = {
+              ['<C-e>'] = {
                 harpoon_telescope.add_and_open,
                 type = 'action',
                 opts = { desc = 'Add to Harpoon and open' },
-              },
-              ['<C-Q>'] = {
-                cq_passthrough,
-                type = 'action',
-                opts = { desc = 'Send to quickfix / toggle quickfix' },
               },
             },
             n = {
@@ -151,12 +126,7 @@ return {
                 harpoon_telescope.add_and_open,
                 type = 'action',
                 opts = { desc = 'Add to Harpoon and open' },
-              },
-              ['<C-Q>'] = {
-                cq_passthrough,
-                type = 'action',
-                opts = { desc = 'Send to quickfix / toggle quickfix' },
-              },
+              }
             },
           },
           file_ignore_patterns = {
@@ -189,172 +159,6 @@ return {
         },
       }
 
-      local pickers = require 'telescope.pickers'
-      local finders = require 'telescope.finders'
-      local make_entry = require 'telescope.make_entry'
-      local conf = require('telescope.config').values
-
-      local live_multigrep = function(opts)
-        opts = opts or {}
-        opts.cwd = opts.cwd or vim.uv.cwd()
-
-        local finder = finders.new_async_job {
-          command_generator = function(prompt)
-            if not prompt or prompt == '' then
-              return nil
-            end
-
-            -- Split prompt by double spaces
-            local pieces = vim.split(prompt, '  ', { plain = true })
-            local args = { 'rg' }
-            PrintPrefix('pieces', pieces)
-
-            if pieces[1] then
-              table.insert(args, '-e')
-              table.insert(args, pieces[1])
-            end
-
-            if pieces[2] then
-              table.insert(args, '-g')
-              table.insert(args, pieces[2])
-            end
-            local exact = vim.tbl_flatten {
-              args,
-              { '--color=never', '--no-heading', '--with-filename', '--line-number', '--column', '--smart-case' },
-            }
-
-            if not pieces[2] then
-              return exact
-            end
-
-            local glob = vim.trim(pieces[2])
-            if glob:find('*', 1, true) or glob:find('?', 1, true) or glob:find('[', 1, true) then
-              return exact
-            end
-
-            -- Try a literal filename first, then a prefix glob only if the
-            -- literal search has no matches.
-            local fallback = vim.deepcopy(exact)
-            for index, value in ipairs(fallback) do
-              if value == glob then
-                fallback[index] = glob .. '*'
-                break
-              end
-            end
-
-            local quote = function(value)
-              return vim.fn.shellescape(value)
-            end
-            local command = function(command_args)
-              return table.concat(vim.tbl_map(quote, command_args), ' ')
-            end
-            local script = 'if '
-                .. command(exact)
-                .. '; then exit 0; fi; status=$?; if [ "$status" -eq 1 ]; then '
-                .. command(fallback)
-                .. '; exit $?; fi; exit "$status"'
-            return { 'sh', '-c', script }
-          end,
-          entry_maker = make_entry.gen_from_vimgrep(opts),
-          cwd = opts.cwd,
-        }
-
-        pickers
-            .new(opts, {
-              debounce = 100,
-              prompt_title = 'Multi Grep',
-              finder = finder,
-              previewer = conf.grep_previewer(opts),
-              sorter = require('telescope.sorters').empty(),
-            })
-            :find()
-      end
-
-      local markdown_headings = function(opts)
-        opts = opts or {}
-
-        if vim.bo.filetype ~= 'markdown' then
-          vim.notify('Markdown headings are only available in Markdown buffers', vim.log.levels.WARN)
-          return
-        end
-
-        local bufnr = vim.api.nvim_get_current_buf()
-        local ok, parser = pcall(vim.treesitter.get_parser, bufnr, 'markdown')
-        if not ok or not parser then
-          vim.notify('No markdown tree-sitter parser available', vim.log.levels.ERROR)
-          return
-        end
-
-        local ok_query, query = pcall(vim.treesitter.query.parse, 'markdown', [[
-          (atx_heading) @heading
-          (setext_heading) @heading
-        ]])
-        if not ok_query or not query then
-          vim.notify('Failed to load markdown heading query', vim.log.levels.ERROR)
-          return
-        end
-
-        local root = parser:parse()[1]:root()
-        local headings = {}
-
-        for _, node in query:iter_captures(root, bufnr) do
-          local level
-          for child in node:iter_children() do
-            local child_type = child:type()
-            level = tonumber(child_type:match '^atx_h(%d)_marker$' or child_type:match '^setext_h(%d)_underline$')
-            if level then
-              break
-            end
-          end
-
-          local content = node:field('heading_content')[1]
-          local text = content and vim.treesitter.get_node_text(content, bufnr)
-              or vim.treesitter.get_node_text(node, bufnr)
-          text = vim.trim(text)
-          if node:type() == 'atx_heading' then
-            text = text:gsub('%s*#+%s*$', '')
-          end
-
-          if text ~= '' then
-            table.insert(headings, {
-              level = level or 1,
-              text = text,
-              lnum = select(1, node:range()) + 1,
-              filename = vim.api.nvim_buf_get_name(bufnr),
-              bufnr = bufnr,
-            })
-          end
-        end
-
-        if #headings == 0 then
-          vim.notify('No markdown headings found', vim.log.levels.INFO)
-          return
-        end
-
-        pickers.new(opts, {
-          prompt_title = 'Markdown Headings',
-          finder = finders.new_table {
-            results = headings,
-            entry_maker = function(entry)
-              return {
-                value = entry,
-                display = string.rep('  ', entry.level - 1) .. entry.text,
-                ordinal = entry.text,
-                lnum = entry.lnum,
-                col = 1,
-                filename = entry.filename,
-                bufnr = entry.bufnr,
-              }
-            end,
-          },
-          previewer = conf.grep_previewer(opts),
-          sorter = conf.generic_sorter(opts),
-        }):find()
-      end
-
-      vim.api.nvim_create_user_command('MarkdownHeadings', function()
-        markdown_headings {}
-      end, {})
 
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
@@ -369,49 +173,29 @@ return {
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
-      vim.keymap.set('n', '<leader>sG', live_multigrep, { desc = '[S]earch by [G]rep' })
+      -- vim.keymap.set('n', '<leader>sG', live_multigrep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>s/', builtin.current_buffer_fuzzy_find, { desc = '[S]earch [/]' })
       vim.keymap.set('n', '<leader>sd', function()
-        if vim.bo.filetype == 'markdown' then
-          markdown_headings {}
-          return
-        end
-        builtin.diagnostics()
-      end, { desc = '[S]earch Markdown [D]headings or [D]iagnostics' })
+        builtin.diagnostics({ bufnr = 0 })
+      end, { desc = '[S]earch Markdown [D]ocument headings or [D]iagnostics' })
+      vim.keymap.set('n', '<leader>sD', function()
+        builtin.diagnostics({
+          bufnr = nil,
+        })
+      end, { desc = '[S]earch all buffer [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
-      vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader>sm', builtin.marks, { desc = '[S]earch [M]arks' })
       vim.keymap.set('n', '<leader>su', builtin.buffers, { desc = '[S]earch B[u]ffers' })
       vim.keymap.set('n', '<leader>sb', builtin.git_branches, { desc = '[S]earch [B]ranches' })
       vim.keymap.set('n', '<leader>sz', builtin.git_stash, { desc = '[S]earch Stas[h]' })
       vim.keymap.set('n', '<leader>s:', builtin.command_history, { desc = '[S]earch [C]ommands' })
 
-      -- Quickfix passthrough outside pickers. Inside a picker this is also
-      -- registered as a prompt mapping above so it shows in <C-/>/? help.
-      vim.keymap.set('n', '<C-Q>', cq_passthrough, { desc = 'Quickfix passthrough / toggle' })
-
       vim.api.nvim_create_user_command('TelescopeColors', function()
         builtin.colorscheme {
           enable_preview = true,
         }
       end, {})
-
-      -- Slightly advanced example of overriding default behavior and theme
-      vim.keymap.set('n', '<leader>/', builtin.current_buffer_fuzzy_find, { desc = '[/] Current buffer fuzzy find' })
-      -- It's also possible to pass additional configuration options.
-      --  See `:help telescope.builtin.live_grep()` for information about particular keys
-      vim.keymap.set('n', '<leader>s/', function()
-        builtin.live_grep {
-          grep_open_files = true,
-          prompt_title = 'Live Grep in Current File',
-        }
-      end, { desc = '[S]earch [/] in Open Files' })
-
-      -- Shortcut for searching your Neovim configuration files
-      vim.keymap.set('n', '<leader>sn', function()
-        builtin.find_files { cwd = vim.fn.stdpath 'config' }
-      end, { desc = '[S]earch [N]eovim files' })
     end,
   },
   {

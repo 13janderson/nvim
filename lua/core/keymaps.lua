@@ -2,7 +2,6 @@ vim.keymap.set('n', 'gl', function()
   vim.fn.setreg('+', vim.fn.expand '%')
 end, { desc = 'Copy current file path' })
 
-vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 vim.keymap.set('n', '<leader>sp', function()
   vim.wo.spell = not vim.wo.spell
   vim.notify('spell ' .. (vim.wo.spell and 'on' or 'off'))
@@ -44,3 +43,18 @@ vim.keymap.set('n', '<C-t>o', function()
     -- print('tabc ' .. i)
   end
 end)
+
+
+-- quickfix
+local function toggle_qf()
+  for _, win in ipairs(vim.fn.getwininfo()) do
+    if win.quickfix == 1 then
+      vim.cmd 'cclose'
+      return
+    end
+  end
+  vim.cmd 'copen'
+end
+
+-- vim.keymap.set('n', '<leader>q', vim.diagnostic.setqflist, { desc = 'Open diagnostic [Q]uickfix list' })
+vim.keymap.set('n', '<C-Q>', toggle_qf, { desc = 'Open diagnostic [Q]uickfix list' })
