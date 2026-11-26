@@ -35,6 +35,24 @@ return {
       vim.keymap.set('n', 'UL', function()
         vim.cmd 'G log %'
       end)
+
+      -- mergetool
+      vim.keymap.set('n', 'Um', function()
+        vim.cmd 'G mergetool'
+      end)
+
+      vim.keymap.set('n', 'Um', function()
+        vim.cmd 'G mergetool'
+      end)
+
+      vim.keymap.set('n', 'Uv', function()
+        vim.cmd 'Gvdiffsplit!'
+      end)
+
+      vim.keymap.set('n', 'UV', function()
+        -- make this non! for one of these?
+        vim.cmd 'Gvdiffsplit!'
+      end)
     end,
   },
   {
