@@ -20,6 +20,7 @@ return {
             a = { '@conditional.outer', '@loop.outer' },
             i = { '@conditional.inner', '@loop.inner' },
           },
+          C = spec_treesitter { a = '@class.outer', i = '@class.inner' },
         },
       }
 
