@@ -38,13 +38,3 @@ vim.api.nvim_create_autocmd('VimLeavePre', {
     end
   end,
 })
-
--- vim.api.nvim_create_autocmd('QuickFixCmdPost', {
---   callback = function(_)
---     local qf = vim.fn.getqflist()
---     if #qf > 0 then
---       vim.cmd('cfirst!')
---       vim.cmd('e!')
---     end
---   end,
--- })
