@@ -17,17 +17,18 @@ local function toggle_qf()
   end
 end
 
-
-local function get_diagnostic_qf(bufnr)
-  return vim.diagnostic.toqflist(vim.diagnostic.get(bufnr))
+local function toggle_diagnostics()
+  local qf = find_qf()
+  if qf == nil then
+    vim.diagnostic.setqflist()
+  end
 end
 
 
-vim.keymap.set('n', 'd<C-Q>', function() vim.fn.setqflist(get_diagnostic_qf(0)) end,
-  { desc = 'Open diagnostic [Q]uickfix list' })
-vim.keymap.set('n', 'D<C-Q>', function() vim.fn.setqflist(get_diagnostic_qf(nil)) end,
-  { desc = 'Open diagnostic [Q]uickfix list' })
-vim.keymap.set('n', '<C-Q>', toggle_qf, { desc = 'Open diagnostic [Q]uickfix list' })
+
+vim.keymap.set('n', '<leader>q', toggle_diagnostics,
+  { desc = 'Toggle diagnostic [Q]uickfix list' })
+vim.keymap.set('n', '<C-Q>', toggle_qf, { desc = 'Toggle [Q]uickfix list' })
 
 vim.api.nvim_create_autocmd('VimLeavePre', {
   callback = function()
